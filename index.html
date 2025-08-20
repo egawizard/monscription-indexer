@@ -1,938 +1,464 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" class="antialiased">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monscription Indexer - Monad Network</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
-            color: #ffffff;
-            min-height: 100vh;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        header {
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 20px 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo i {
-            font-size: 2rem;
-            background: linear-gradient(45deg, #ff6b35, #f7931e);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .logo h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(45deg, #ffffff, #e0e0e0);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .network-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(255, 107, 53, 0.1);
-            padding: 8px 16px;
-            border-radius: 20px;
-            border: 1px solid rgba(255, 107, 53, 0.3);
-        }
-
-        .network-dot {
-            width: 8px;
-            height: 8px;
-            background: #00ff88;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        main {
-            padding: 40px 0;
-        }
-
-        .hero {
-            text-align: center;
-            margin-bottom: 50px;
-        }
-
-        .hero h2 {
-            font-size: 3rem;
-            font-weight: 800;
-            margin-bottom: 16px;
-            background: linear-gradient(45deg, #ff6b35, #f7931e, #ffcd3c);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero p {
-            font-size: 1.2rem;
-            color: #b0b0b0;
-            max-width: 600px;
-            margin: 0 auto 30px;
-        }
-
-        .mint-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: linear-gradient(45deg, #ff6b35, #f7931e);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
-        }
-
-        .mint-link:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
-        }
-
-        .search-section {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 40px;
-            margin-bottom: 40px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-
-        .search-form {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .input-group {
-            flex: 1;
-            min-width: 250px;
-            position: relative;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 16px 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            color: white;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: #ff6b35;
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        .input-group input::placeholder {
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .search-btn {
-            padding: 16px 32px;
-            background: linear-gradient(45deg, #ff6b35, #f7931e);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            min-width: 120px;
-            justify-content: center;
-        }
-
-        .search-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
-        }
-
-        .search-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
-            color: #b0b0b0;
-        }
-
-        .loading.show {
-            display: block;
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top: 2px solid #ff6b35;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .results {
-            display: none;
-        }
-
-        .results.show {
-            display: block;
-        }
-
-        .token-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-
-        .token-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            gap: 16px;
-        }
-
-        .token-title {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .token-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(45deg, #ff6b35, #f7931e);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.2rem;
-        }
-
-        .token-name h3 {
-            font-size: 1.8rem;
-            margin-bottom: 4px;
-        }
-
-        .token-name .deployer {
-            color: #b0b0b0;
-            font-size: 0.9rem;
-        }
-
-        .token-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: rgba(0, 255, 136, 0.1);
-            border: 1px solid rgba(0, 255, 136, 0.3);
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #ff6b35;
-            margin-bottom: 8px;
-        }
-
-        .stat-label {
-            color: #b0b0b0;
-            font-size: 0.9rem;
-        }
-
-        .progress-bar {
-            margin: 20px 0;
-        }
-
-        .progress-label {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-            color: #b0b0b0;
-        }
-
-        .progress-track {
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ff6b35, #f7931e);
-            border-radius: 4px;
-            transition: width 0.5s ease;
-        }
-
-        .holders-section {
-            margin-top: 30px;
-        }
-
-        .holders-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .holders-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 12px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .holder-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .holder-address {
-            font-family: monospace;
-            color: #b0b0b0;
-            font-size: 0.9rem;
-        }
-
-        .holder-balance {
-            color: #ff6b35;
-            font-weight: 600;
-        }
-
-        .error {
-            background: rgba(255, 59, 48, 0.1);
-            border: 1px solid rgba(255, 59, 48, 0.3);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            color: #ff6b35;
-            display: none;
-        }
-
-        .error.show {
-            display: block;
-        }
-
-        footer {
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 30px 0;
-            text-align: center;
-            margin-top: 60px;
-        }
-
-        .footer-content {
-            color: #b0b0b0;
-            margin-bottom: 16px;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            flex-wrap: wrap;
-        }
-
-        .footer-links a {
-            color: #ff6b35;
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.3s ease;
-        }
-
-        .footer-links a:hover {
-            color: #f7931e;
-        }
-
-        @media (max-width: 768px) {
-            .hero h2 {
-                font-size: 2rem;
-            }
-
-            .search-form {
-                flex-direction: column;
-            }
-
-            .input-group {
-                min-width: auto;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .holders-list {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Monscription Indexer — MONS Viewer</title>
+
+  <!-- Tailwind (cdn) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Ethers v6 UMD build (browser) -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
+
+  <style>
+    /* small extra styling */
+    .glass {
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+  </style>
 </head>
-<body>
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-cube"></i>
-                    <h1>Monscription</h1>
-                </div>
-                <div class="network-info">
-                    <div class="network-dot"></div>
-                    <span>Monad Testnet</span>
-                </div>
-            </div>
-        </div>
+<body class="bg-slate-900 text-slate-100">
+  <main class="min-h-screen p-6 max-w-6xl mx-auto">
+    <header class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold">Monscription Indexer</h1>
+        <p class="text-slate-400 mt-1">Enter a ticker (e.g. <strong>MONS</strong>) to view supply, holders, top-holders and mint progress.</p>
+      </div>
+      <div class="text-right">
+        <a href="https://mons-mon-20.vercel.app/" target="_blank" class="text-sm px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-md">Go to mint</a>
+        <div class="text-xs text-slate-400 mt-1">Created by <a class="underline" href="https://x.com/ega_2ez4crypto" target="_blank">ega_2ez4crypto</a></div>
+      </div>
     </header>
 
-    <main>
-        <div class="container">
-            <div class="hero">
-                <h2>Monscription Indexer</h2>
-                <p>Explore and track all Monscription tokens on the Monad network. Search by ticker to view detailed information about token supply, holders, and minting progress.</p>
-                <a href="https://mons-mon-20.vercel.app/" target="_blank" class="mint-link">
-                    <i class="fas fa-hammer"></i>
-                    Start Minting
-                </a>
-            </div>
-
-            <div class="search-section">
-                <div class="search-form">
-                    <div class="input-group">
-                        <input type="text" id="tickerInput" placeholder="Enter ticker (e.g., MONS)" maxlength="10">
-                    </div>
-                    <button class="search-btn" id="searchBtn">
-                        <i class="fas fa-search"></i>
-                        <span>Search</span>
-                    </button>
-                </div>
-
-                <div class="loading" id="loading">
-                    <div class="spinner"></div>
-                    <p>Loading token data...</p>
-                </div>
-
-                <div class="error" id="error">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p id="errorMessage">Token not found or error occurred</p>
-                </div>
-
-                <div class="results" id="results">
-                    <div class="token-card" id="tokenCard">
-                        <!-- Token details will be populated here -->
-                    </div>
-                </div>
-            </div>
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div class="md:col-span-2 glass p-6 rounded-2xl shadow-lg">
+        <label class="block text-sm text-slate-300 mb-2">Ticker</label>
+        <div class="flex gap-3 items-center">
+          <input id="ticker" class="flex-1 px-4 py-3 rounded-md bg-slate-800 border border-slate-700 outline-none" placeholder="Enter ticker (e.g. MONS)" value="MONS" />
+          <button id="btnLookup" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-md font-semibold">Lookup</button>
+          <button id="btnConnect" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 rounded-md font-semibold">Connect Wallet</button>
         </div>
-    </main>
 
-    <footer>
-        <div class="container">
-            <div class="footer-content">
-                <p>Created by <a href="https://x.com/ega_2ez4crypto" target="_blank">@ega_2ez4crypto</a></p>
-                <p>Monscription Indexer for Monad Network</p>
+        <div id="status" class="mt-4 text-sm text-slate-400"></div>
+
+        <div id="mainContent" class="mt-6 hidden">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 bg-slate-800 rounded-xl">
+              <div class="text-slate-400 text-sm">Max supply</div>
+              <div id="maxSupply" class="text-2xl font-bold mt-1">—</div>
             </div>
-            <div class="footer-links">
-                <a href="https://mons-mon-20.vercel.app/" target="_blank">Mint Tokens</a>
-                <a href="https://x.com/ega_2ez4crypto" target="_blank">Twitter</a>
+            <div class="p-4 bg-slate-800 rounded-xl">
+              <div class="text-slate-400 text-sm">Total minted</div>
+              <div id="minted" class="text-2xl font-bold mt-1">—</div>
             </div>
+            <div class="p-4 bg-slate-800 rounded-xl">
+              <div class="text-slate-400 text-sm">Holders</div>
+              <div id="holdersCount" class="text-2xl font-bold mt-1">—</div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <div class="flex items-center justify-between">
+              <div class="text-sm text-slate-300">Mint progress</div>
+              <div id="percentLabel" class="text-sm text-slate-400">—</div>
+            </div>
+            <div class="w-full h-4 mt-2 bg-slate-700 rounded-full overflow-hidden">
+              <div id="progressBar" class="h-4 rounded-full bg-emerald-500" style="width:0%"></div>
+            </div>
+          </div>
+
+          <div class="mt-6 p-4 bg-slate-800 rounded-xl">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold">Top holders</h3>
+              <div class="text-sm text-slate-400">Showing top <span id="topN">10</span> (by balance)</div>
+            </div>
+
+            <div class="mt-3 overflow-x-auto">
+              <table class="w-full text-left">
+                <thead class="text-slate-400 text-xs uppercase">
+                  <tr>
+                    <th class="py-2 pr-4">#</th>
+                    <th class="py-2 pr-4">Address</th>
+                    <th class="py-2 pr-4">Balance</th>
+                    <th class="py-2 pr-4">Share</th>
+                    <th class="py-2 pr-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="topHoldersTable" class="align-top"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="mt-6 p-4 bg-slate-800 rounded-xl">
+            <h3 class="text-lg font-semibold">Raw token info & actions</h3>
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <pre id="rawInfo" class="p-3 bg-slate-900 rounded-md text-xs overflow-auto max-h-48"></pre>
+              <div class="space-y-3">
+                <button id="btnCopyRaw" class="w-full px-4 py-2 bg-slate-700 rounded-md">Copy raw JSON</button>
+                <a id="mintLink" target="_blank" class="block w-full text-center px-4 py-2 bg-indigo-600 rounded-md hover:bg-indigo-500">Open mint page</a>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <aside class="glass p-6 rounded-2xl shadow-lg">
+        <h3 class="text-lg font-semibold mb-3">Connection</h3>
+        <div class="text-sm text-slate-400">RPC & chain</div>
+        <div class="mt-2 text-xs bg-slate-900 p-3 rounded">
+          <div><strong>Chain ID:</strong> 10143</div>
+          <div class="mt-1"><strong>RPC:</strong> https://testnet-rpc.monad.xyz</div>
+          <div class="mt-1"><strong>Contract:</strong> 0x07169f0F890C3595421512D98DC79b8bce6E5fA6</div>
+        </div>
+
+        <div class="mt-4">
+          <h4 class="text-sm font-semibold">Notes</h4>
+          <ul class="text-slate-400 text-sm mt-2 space-y-1">
+            <li>- The indexer reads data directly from the Monscription contract (read-only).</li>
+            <li>- Top holders computed from on-chain holder list (first N entries processed).</li>
+            <li>- If holders list is large, the UI limits requests to avoid RPC throttling.</li>
+          </ul>
+        </div>
+
+        <div class="mt-6 text-xs text-slate-400">
+          <div>Language: English</div>
+          <div class="mt-2">Credit: <a href="https://x.com/ega_2ez4crypto" target="_blank" class="underline">ega_2ez4crypto</a></div>
+        </div>
+      </aside>
+    </section>
+
+    <footer class="text-center text-slate-500 text-sm mt-6">
+      Ready to release — copy this file to your hosting. If you want customization (dark theme, token logo, auto-refresh), tell me what to change.
     </footer>
+  </main>
 
-    <script>
-        // Contract configuration
-        const CONTRACT_ADDRESS = '0x07169f0F890C3595421512D98DC79b8bce6E5fA6';
-        const RPC_URLS = [
-            'https://testnet-rpc.monad.xyz',
-            'https://testnet-rpc.monad.xyz'  // Could add backup RPCs here if available
-        ];
-        const CHAIN_ID = 10143;
+  <script>
+    (async () => {
+      // Configuration
+      const RPC = "https://testnet-rpc.monad.xyz";
+      const CHAIN_ID = 10143;
+      const CONTRACT_ADDRESS = "0x07169f0F890C3595421512D98DC79b8bce6E5fA6";
+      const MINT_LINK = "https://mons-mon-20.vercel.app/"; // as requested
 
-        // Contract ABI
-        const CONTRACT_ABI = [
-            {
-                "inputs": [
-                    {"internalType": "string", "name": "tick", "type": "string"}
-                ],
-                "name": "getTokenInfo",
-                "outputs": [
-                    {"internalType": "uint256", "name": "maxSupply", "type": "uint256"},
-                    {"internalType": "uint256", "name": "limitPerMint", "type": "uint256"},
-                    {"internalType": "uint256", "name": "minted", "type": "uint256"},
-                    {"internalType": "address", "name": "deployer", "type": "address"},
-                    {"internalType": "uint256", "name": "holdersCount", "type": "uint256"}
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "string", "name": "tick", "type": "string"}
-                ],
-                "name": "getMintProgress",
-                "outputs": [
-                    {"internalType": "uint256", "name": "minted", "type": "uint256"},
-                    {"internalType": "uint256", "name": "maxSupply", "type": "uint256"},
-                    {"internalType": "uint256", "name": "percentage", "type": "uint256"}
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "string", "name": "tick", "type": "string"}
-                ],
-                "name": "getHolders",
-                "outputs": [
-                    {"internalType": "address[]", "name": "", "type": "address[]"}
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "address", "name": "user", "type": "address"},
-                    {"internalType": "string", "name": "tick", "type": "string"}
-                ],
-                "name": "getBalance",
-                "outputs": [
-                    {"internalType": "uint256", "name": "", "type": "uint256"}
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {"internalType": "string", "name": "", "type": "string"}
-                ],
-                "name": "tokens",
-                "outputs": [
-                    {"internalType": "uint256", "name": "maxSupply", "type": "uint256"},
-                    {"internalType": "uint256", "name": "limitPerMint", "type": "uint256"},
-                    {"internalType": "address", "name": "deployer", "type": "address"},
-                    {"internalType": "bool", "name": "exists", "type": "bool"},
-                    {"internalType": "uint256", "name": "deployedAt", "type": "uint256"}
-                ],
-                "stateMutability": "view",
-                "type": "function"
+      // ABI (from user)
+      const ABI = [
+        {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
+        {"anonymous":false,"inputs":[{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"uint256","name":"maxSupply","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"indexed":false,"internalType":"address","name":"deployer","type":"address"}],"name":"Deploy","type":"event"},
+        {"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"}],"name":"deployToken","outputs":[],"stateMutability":"payable","type":"function"},
+        {"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"emergencyWithdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
+        {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"string","name":"operation","type":"string"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"data","type":"string"},{"indexed":false,"internalType":"uint256","name":"inscriptionNumber","type":"uint256"}],"name":"Inscribe","type":"event"},
+        {"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"payable","type":"function"},
+        {"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setDeployFee","outputs":[],"stateMutability":"nonpayable","type":"function"},
+        {"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setMintFee","outputs":[],"stateMutability":"nonpayable","type":"function"},
+        {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[],"stateMutability":"nonpayable","type":"function"},
+        {"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
+        {"stateMutability":"payable","type":"receive"},
+        {"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"string","name":"","type":"string"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+        {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+        {"inputs":[],"name":"deployFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+        {"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"tick","type":"string"}],"name":"getBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+        {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHolders","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},
+        {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHoldersCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+        {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getMintProgress","outputs":[{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"percentage","type":"uint256"}],"stateMutability":"view","type":"function"},
+        {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTokenInfo","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"uint256","name":"holdersCount","type":"uint256"}],"stateMutability":"view","type":"function"},
+        {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTotalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+        {"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"holders","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+        {"inputs":[],"name":"inscriptionCounter","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+        {"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"address","name":"","type":"address"}],"name":"isHolder","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
+        {"inputs":[],"name":"mintFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+        {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+        {"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"tokens","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"bool","name":"exists","type":"bool"},{"internalType":"uint256","name":"deployedAt","type":"uint256"}],"stateMutability":"view","type":"function"},
+        {"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"totalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+      ];
+
+      // DOM
+      const el = s => document.querySelector(s);
+      const status = el("#status");
+      const btnLookup = el("#btnLookup");
+      const inputTicker = el("#ticker");
+      const mainContent = el("#mainContent");
+      const maxSupplyEl = el("#maxSupply");
+      const mintedEl = el("#minted");
+      const holdersCountEl = el("#holdersCount");
+      const progressBar = el("#progressBar");
+      const percentLabel = el("#percentLabel");
+      const topHoldersTable = el("#topHoldersTable");
+      const rawInfoEl = el("#rawInfo");
+      const btnCopyRaw = el("#btnCopyRaw");
+      const mintLinkBtn = el("#mintLink");
+      const topNEl = el("#topN");
+      const btnConnect = el("#btnConnect");
+
+      // Setup ethers provider & contract
+      const provider = new ethers.providers.JsonRpcProvider(RPC, Number(CHAIN_ID));
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+
+      // Wallet connect (MetaMask) to allow copy-to-wallet or more features
+      let walletSigner = null;
+      async function connectWallet() {
+        if (!window.ethereum) {
+          alert("No injected wallet found (MetaMask). You can still use the viewer read-only.");
+          return;
+        }
+        try {
+          const providerWeb3 = new ethers.BrowserProvider(window.ethereum);
+          await providerWeb3.send("eth_requestAccounts", []);
+          walletSigner = await providerWeb3.getSigner();
+          btnConnect.textContent = "Wallet connected";
+          btnConnect.classList.remove("bg-sky-600");
+          btnConnect.classList.add("bg-slate-600");
+        } catch (err) {
+          console.error(err);
+          alert("Wallet connection failed.");
+        }
+      }
+
+      btnConnect.addEventListener("click", connectWallet);
+
+      function setStatus(text, error=false) {
+        status.textContent = text;
+        status.style.color = error ? "#f87171" : "";
+      }
+
+      // concurrency-limited map to avoid RPC flooding
+      async function pMap(iterable, mapper, concurrency = 8) {
+        const ret = [];
+        const iterator = iterable[Symbol.iterator]();
+        let active = 0;
+        let done = false;
+
+        return new Promise((resolve, reject) => {
+          const next = async () => {
+            if (done) return;
+            const item = iterator.next();
+            if (item.done) {
+              done = true;
+              if (active === 0) resolve(ret);
+              return;
             }
-        ];
-
-        // Initialize provider and contract with retry logic
-        let provider;
-        let contract;
-
-        async function initializeProvider() {
-            for (const rpcUrl of RPC_URLS) {
-                try {
-                    console.log('Trying RPC:', rpcUrl);
-                    const testProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
-                    
-                    // Test the connection
-                    await Promise.race([
-                        testProvider.getNetwork(),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 5000))
-                    ]);
-                    
-                    provider = testProvider;
-                    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-                    console.log('Successfully connected to RPC:', rpcUrl);
-                    return true;
-                } catch (err) {
-                    console.warn('Failed to connect to RPC:', rpcUrl, err.message);
-                    continue;
-                }
-            }
-            return false;
-        }
-
-        // Initialize on load
-        let providerReady = false;
-        initializeProvider().then(success => {
-            providerReady = success;
-            if (!success) {
-                showError('Failed to connect to Monad network. Please try again later.');
-            }
-        });
-
-        // DOM elements
-        const tickerInput = document.getElementById('tickerInput');
-        const searchBtn = document.getElementById('searchBtn');
-        const loading = document.getElementById('loading');
-        const error = document.getElementById('error');
-        const results = document.getElementById('results');
-        const tokenCard = document.getElementById('tokenCard');
-        const errorMessage = document.getElementById('errorMessage');
-
-        // Utility functions
-        function formatTokenAmount(amount, decimals = 18) {
-            // Convert from wei to token amount
-            const tokenAmount = parseFloat(ethers.utils.formatUnits(amount, decimals));
-            
-            if (tokenAmount >= 1e9) {
-                return (tokenAmount / 1e9).toFixed(2) + 'B';
-            } else if (tokenAmount >= 1e6) {
-                return (tokenAmount / 1e6).toFixed(2) + 'M';
-            } else if (tokenAmount >= 1e3) {
-                return (tokenAmount / 1e3).toFixed(2) + 'K';
-            }
-            return tokenAmount.toLocaleString(undefined, { maximumFractionDigits: 2 });
-        }
-
-        function formatNumber(num) {
-            if (num >= 1e9) {
-                return (num / 1e9).toFixed(2) + 'B';
-            } else if (num >= 1e6) {
-                return (num / 1e6).toFixed(2) + 'M';
-            } else if (num >= 1e3) {
-                return (num / 1e3).toFixed(2) + 'K';
-            }
-            return num.toLocaleString();
-        }
-
-        function shortenAddress(address) {
-            return `${address.slice(0, 6)}...${address.slice(-4)}`;
-        }
-
-        function showLoading() {
-            loading.classList.add('show');
-            error.classList.remove('show');
-            results.classList.remove('show');
-        }
-
-        function hideLoading() {
-            loading.classList.remove('show');
-        }
-
-        function showError(message) {
-            hideLoading();
-            errorMessage.textContent = message;
-            error.classList.add('show');
-            results.classList.remove('show');
-        }
-
-        function showResults() {
-            hideLoading();
-            error.classList.remove('show');
-            results.classList.add('show');
-        }
-
-        // Main search function
-        async function searchToken(ticker) {
-            if (!ticker) {
-                showError('Please enter a ticker');
-                return;
-            }
-
-            if (!providerReady) {
-                showError('Network not ready. Trying to reconnect...');
-                const connected = await initializeProvider();
-                if (!connected) {
-                    showError('Failed to connect to Monad network. Please try again later.');
-                    return;
-                }
-                providerReady = true;
-            }
-
-            showLoading();
-            searchBtn.disabled = true;
-            console.log('Searching for ticker:', ticker.toUpperCase());
-
+            active++;
             try {
-                // Test provider connection first
-                console.log('Testing provider connection...');
-                const network = await provider.getNetwork();
-                console.log('Connected to network:', network);
-
-                // Check if token exists with timeout
-                console.log('Checking if token exists...');
-                const tokenExistsPromise = contract.tokens(ticker.toUpperCase());
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Request timeout')), 10000)
-                );
-                
-                const tokenExists = await Promise.race([tokenExistsPromise, timeoutPromise]);
-                console.log('Token exists result:', tokenExists);
-                
-                if (!tokenExists.exists) {
-                    showError(`Token "${ticker.toUpperCase()}" not found`);
-                    searchBtn.disabled = false;
-                    return;
-                }
-
-                // Get token info with timeout
-                console.log('Getting token info...');
-                const tokenInfoPromise = contract.getTokenInfo(ticker.toUpperCase());
-                const [maxSupply, limitPerMint, minted, deployer, holdersCount] = await Promise.race([
-                    tokenInfoPromise, 
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Token info timeout')), 10000))
-                ]);
-                console.log('Token info:', { maxSupply: maxSupply.toString(), limitPerMint: limitPerMint.toString(), minted: minted.toString(), deployer, holdersCount: holdersCount.toString() });
-                
-                // Get mint progress with timeout
-                console.log('Getting mint progress...');
-                const mintProgressPromise = contract.getMintProgress(ticker.toUpperCase());
-                const [mintedProgress, maxSupplyProgress, percentage] = await Promise.race([
-                    mintProgressPromise,
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Mint progress timeout')), 10000))
-                ]);
-                console.log('Mint progress:', { mintedProgress: mintedProgress.toString(), maxSupplyProgress: maxSupplyProgress.toString(), percentage: percentage.toString() });
-                
-                // Get holders with timeout (this might fail, so we'll make it optional)
-                let holders = [];
-                let holderBalances = [];
-                
-                try {
-                    console.log('Getting holders...');
-                    const holdersPromise = contract.getHolders(ticker.toUpperCase());
-                    holders = await Promise.race([
-                        holdersPromise,
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Holders timeout')), 5000))
-                    ]);
-                    console.log('Holders found:', holders.length);
-                    
-                    // Get balances for each holder (limit to first 10 to avoid timeout)
-                    if (holders.length > 0) {
-                        console.log('Getting holder balances...');
-                        const limitedHolders = holders.slice(0, 10);
-                        holderBalances = await Promise.all(
-                            limitedHolders.map(async (holder) => {
-                                try {
-                                    const balance = await contract.getBalance(holder, ticker.toUpperCase());
-                                    return {
-                                        address: holder,
-                                        balance: balance.toString()
-                                    };
-                                } catch (err) {
-                                    console.warn('Failed to get balance for holder:', holder, err);
-                                    return {
-                                        address: holder,
-                                        balance: '0'
-                                    };
-                                }
-                            })
-                        );
-
-                        // Sort by balance (descending)
-                        holderBalances.sort((a, b) => parseInt(b.balance) - parseInt(a.balance));
-                    }
-                } catch (holderError) {
-                    console.warn('Could not fetch holders:', holderError);
-                }
-
-                console.log('All data fetched successfully');
-
-                // Display results
-                displayTokenInfo({
-                    ticker: ticker.toUpperCase(),
-                    maxSupply: maxSupply.toString(),
-                    limitPerMint: limitPerMint.toString(),
-                    minted: minted.toString(),
-                    deployer: deployer,
-                    holdersCount: holdersCount.toString(),
-                    percentage: percentage.toString(),
-                    holders: holderBalances,
-                    deployedAt: tokenExists.deployedAt.toString()
-                });
-
-                showResults();
-
-            } catch (err) {
-                console.error('Error fetching token data:', err);
-                if (err.message.includes('timeout')) {
-                    showError('Request timed out. The Monad network might be slow. Please try again.');
-                } else if (err.message.includes('network')) {
-                    showError('Network connection error. Please check your connection and try again.');
-                } else {
-                    showError(`Error: ${err.message || 'Unknown error occurred'}`);
-                }
+              const r = await mapper(item.value);
+              ret.push(r);
+            } catch (e) {
+              reject(e);
+              done = true;
+              return;
             } finally {
-                searchBtn.disabled = false;
+              active--;
+              next();
             }
+          };
+          // start initial
+          for (let i = 0; i < concurrency; i++) next();
+        });
+      }
+
+      // Format helpers
+      function shortAddr(a) {
+        return a ? (a.slice(0,6) + "..." + a.slice(-4)) : "";
+      }
+      function formatNumber(n) {
+        try {
+          if (typeof n === "string") n = BigInt(n);
+          if (typeof n === "bigint") return n.toString();
+          return String(n);
+        } catch (e) {
+          return String(n);
         }
+      }
 
-        function displayTokenInfo(tokenData) {
-            const mintProgress = (parseFloat(ethers.utils.formatUnits(tokenData.minted, 18)) / parseFloat(ethers.utils.formatUnits(tokenData.maxSupply, 18))) * 100;
-            const isComplete = mintProgress >= 100;
+      async function fetchToken(tick) {
+        setStatus("Fetching token info...");
+        mainContent.classList.add("hidden");
+        topHoldersTable.innerHTML = "";
+        rawInfoEl.textContent = "";
 
-            tokenCard.innerHTML = `
-                <div class="token-header">
-                    <div class="token-title">
-                        <div class="token-icon">${tokenData.ticker.substring(0, 2)}</div>
-                        <div class="token-name">
-                            <h3>${tokenData.ticker}</h3>
-                            <div class="deployer">Deployed by ${shortenAddress(tokenData.deployer)}</div>
-                        </div>
-                    </div>
-                    <div class="token-status">
-                        <div class="network-dot"></div>
-                        <span>${isComplete ? 'Fully Minted' : 'Active'}</span>
-                    </div>
-                </div>
+        try {
+          // getTokenInfo
+          const info = await contract.getTokenInfo(tick);
+          // info: { maxSupply, limitPerMint, minted, deployer, holdersCount }
+          const maxSupply = BigInt(info.maxSupply.toString ? info.maxSupply.toString() : info.maxSupply);
+          const minted = BigInt(info.minted.toString ? info.minted.toString() : info.minted);
+          const holdersCount = BigInt(info.holdersCount.toString ? info.holdersCount.toString() : info.holdersCount);
+          const limitPerMint = BigInt(info.limitPerMint.toString ? info.limitPerMint.toString() : info.limitPerMint);
+          const deployer = info.deployer;
 
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value">${formatTokenAmount(tokenData.maxSupply)}</div>
-                        <div class="stat-label">Max Supply</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${formatTokenAmount(tokenData.minted)}</div>
-                        <div class="stat-label">Total Minted</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${formatTokenAmount(tokenData.limitPerMint)}</div>
-                        <div class="stat-label">Limit Per Mint</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${tokenData.holdersCount}</div>
-                        <div class="stat-label">Total Holders</div>
-                    </div>
-                </div>
+          // getMintProgress (some contracts provide percentage)
+          let progress = { minted, maxSupply, percentage: 0n };
+          try {
+            const p = await contract.getMintProgress(tick);
+            progress = {
+              minted: BigInt(p.minted.toString ? p.minted.toString() : p.minted),
+              maxSupply: BigInt(p.maxSupply.toString ? p.maxSupply.toString() : p.maxSupply),
+              percentage: BigInt(p.percentage.toString ? p.percentage.toString() : p.percentage)
+            };
+          } catch (e) {
+            // fallback to compute percentage
+            if (maxSupply > 0n) {
+              const perc = (minted * 100n) / maxSupply;
+              progress = { minted, maxSupply, percentage: perc };
+            }
+          }
 
-                <div class="progress-bar">
-                    <div class="progress-label">
-                        <span>Mint Progress</span>
-                        <span>${mintProgress.toFixed(2)}%</span>
-                    </div>
-                    <div class="progress-track">
-                        <div class="progress-fill" style="width: ${Math.min(mintProgress, 100)}%"></div>
-                    </div>
-                </div>
+          // holders list (be careful if huge)
+          setStatus("Fetching holders list (may take time for many holders)...");
+          let holders = [];
+          try {
+            holders = await contract.getHolders(tick);
+          } catch (e) {
+            // fallback: try getHoldersCount and iterate holders mapping
+            try {
+              const count = Number(holdersCount);
+              for (let i = 0; i < Math.min(count, 1000); i++) {
+                const addr = await contract.holders(tick, i);
+                holders.push(addr);
+              }
+            } catch (ee) {
+              console.warn("Could not fetch holders listing by index", ee);
+            }
+          }
 
-                ${tokenData.holders.length > 0 ? `
-                <div class="holders-section">
-                    <div class="holders-header">
-                        <h4><i class="fas fa-users"></i> Top Holders</h4>
-                    </div>
-                    <div class="holders-list">
-                        ${tokenData.holders.slice(0, 10).map(holder => `
-                            <div class="holder-item">
-                                <span class="holder-address">${shortenAddress(holder.address)}</span>
-                                <span class="holder-balance">${formatTokenAmount(holder.balance)}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                ` : ''}
+          // compute balances for each holder (limit how many we fetch)
+          setStatus(`Fetching balances for ${holders.length} holders (limited/parallel)...`);
+          const maxToProcess = Math.min(holders.length, 500); // safety guard (adjustable)
+          const holdersToProcess = holders.slice(0, maxToProcess);
+
+          // pMap concurrency to avoid throttling
+          const results = await pMap(holdersToProcess, async (addr) => {
+            const bal = await contract.getBalance(addr, tick);
+            // convert to BigInt
+            const b = BigInt(bal.toString ? bal.toString() : bal);
+            return { address: addr, balance: b };
+          }, 10);
+
+          // if there are more holders not processed, mark them as zero or unknown
+          // sort results by balance desc
+          results.sort((a,b) => {
+            if (a.balance > b.balance) return -1;
+            if (a.balance < b.balance) return 1;
+            return 0;
+          });
+
+          // compute top holders and share percentages
+          const totalMinted = progress.minted || minted || BigInt(await contract.getTotalMinted(tick).then(r=>r.toString()).catch(()=> "0"));
+          const totalMintedBig = BigInt(totalMinted);
+          const topN = 10;
+          topNEl.textContent = topN;
+
+          // update UI
+          maxSupplyEl.textContent = formatNumber(maxSupply);
+          mintedEl.textContent = formatNumber(progress.minted ?? minted);
+          holdersCountEl.textContent = formatNumber(holdersCount);
+          const percent = Number(progress.percentage ?? ((progress.minted * 100n) / (progress.maxSupply || 1n)));
+          percentLabel.textContent = percent + "%";
+          progressBar.style.width = Math.min(100, percent) + "%";
+
+          // fill top holders table
+          topHoldersTable.innerHTML = "";
+          const top = results.slice(0, topN);
+          top.forEach((h, idx) => {
+            const share = totalMintedBig > 0n ? Number((h.balance * 10000n) / totalMintedBig) / 100 : 0;
+            const tr = document.createElement("tr");
+            tr.className = "border-t border-slate-700";
+            tr.innerHTML = `
+              <td class="py-3 pr-4 align-top text-sm">${idx+1}</td>
+              <td class="py-3 pr-4 align-top text-sm"><a href="#" class="underline small" data-addr="${h.address}">${shortAddr(h.address)}</a> <div class="text-xs text-slate-400">${h.address}</div></td>
+              <td class="py-3 pr-4 align-top text-sm">${formatNumber(h.balance)}</td>
+              <td class="py-3 pr-4 align-top text-sm">${share.toFixed(2)}%</td>
+              <td class="py-3 pr-4 align-top text-sm">
+                <button data-copy="${h.address}" class="px-2 py-1 bg-slate-700 rounded text-xs">Copy</button>
+                <a href="#" data-explorer="${h.address}" class="ml-2 text-xs underline">View</a>
+              </td>
             `;
+            topHoldersTable.appendChild(tr);
+          });
+
+          // raw info
+          const raw = {
+            tick,
+            contract: CONTRACT_ADDRESS,
+            maxSupply: maxSupply.toString(),
+            minted: progress.minted.toString(),
+            percent: progress.percentage.toString(),
+            limitPerMint: limitPerMint.toString(),
+            deployer,
+            holdersCount: holdersCount.toString(),
+            holdersSample: holders.slice(0, 50)
+          };
+          rawInfoEl.textContent = JSON.stringify(raw, null, 2);
+
+          // mint link
+          mintLinkBtn.href = `${MINT_LINK}?tick=${encodeURIComponent(tick)}`;
+
+          // wire copy buttons
+          topHoldersTable.querySelectorAll("button[data-copy]").forEach(btn => {
+            btn.addEventListener("click", async (ev) => {
+              const addr = btn.getAttribute("data-copy");
+              try {
+                await navigator.clipboard.writeText(addr);
+                btn.textContent = "Copied";
+                setTimeout(()=> btn.textContent = "Copy", 1200);
+              } catch(e) {
+                alert("Copy failed, please copy manually: " + addr);
+              }
+            });
+          });
+
+          // explorer links: no standard explorer for monad testnet included - open a block explorer if exists
+          topHoldersTable.querySelectorAll("a[data-explorer]").forEach(a => {
+            a.addEventListener("click", (ev) => {
+              ev.preventDefault();
+              const addr = a.getAttribute("data-explorer");
+              // If you have a Monad testnet explorer URL, replace below:
+              const explorerUrl = `https://explorer.monad.xyz/address/${addr}`; // <- best-effort placeholder
+              window.open(explorerUrl, "_blank");
+            });
+          });
+
+          // show
+          mainContent.classList.remove("hidden");
+          setStatus("Token loaded successfully.");
+        } catch (err) {
+          console.error(err);
+          setStatus("Failed to fetch token data. See console for details.", true);
+          mainContent.classList.add("hidden");
         }
+      }
 
-        // Event listeners
-        searchBtn.addEventListener('click', () => {
-            const ticker = tickerInput.value.trim();
-            searchToken(ticker);
-        });
+      // Attach events
+      btnLookup.addEventListener("click", () => {
+        const tick = inputTicker.value.trim();
+        if (!tick) {
+          setStatus("Please enter a ticker.", true);
+          return;
+        }
+        fetchToken(tick.toUpperCase());
+      });
 
-        tickerInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const ticker = tickerInput.value.trim();
-                searchToken(ticker);
-            }
-        });
+      // copy raw json
+      btnCopyRaw.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(rawInfoEl.textContent);
+          btnCopyRaw.textContent = "Copied";
+          setTimeout(()=> btnCopyRaw.textContent = "Copy raw JSON", 1200);
+        } catch (e) {
+          alert("Failed copy.");
+        }
+      });
 
-        // Auto-search MONS on page load
-        window.addEventListener('load', () => {
-            tickerInput.value = 'MONS';
-            searchToken('MONS');
-        });
+      // automatically load default ticker on page open
+      setStatus("Ready. Enter a ticker and click Lookup.");
+      // auto-run for MONS initially:
+      setTimeout(()=> {
+        const defaultTick = inputTicker.value.trim();
+        if (defaultTick) fetchToken(defaultTick.toUpperCase());
+      }, 400);
 
-        // Input validation
-        tickerInput.addEventListener('input', (e) => {
-            e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        });
-    </script>
+    })();
+  </script>
 </body>
 </html>
