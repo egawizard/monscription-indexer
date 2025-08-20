@@ -44,7 +44,7 @@
         <button id="clearBtn" title="Reset view" class="px-3 py-2 rounded-md bg-white/6">Reset</button>
       </div>
 
-      <div id="status" class="text-sm text-slate-400 mb-4">RPC: <span id="rpcUrl" class="mono">https://testnet-rpc.monad.xyz</span></div>
+      <div id="status" class="text-sm text-slate-400 mb-4">RPC: <span id="rpcUrl" class="mono">https://testnet-rpc.monad.xyz</span> • Chain ID: 10143</div>
 
       <div id="resultWrap" class="space-y-6">
         <!-- Summary -->
@@ -59,7 +59,7 @@
             <div class="text-xs text-slate-400">Max Supply</div>
             <div id="outMax" class="text-lg font-semibold">21,000,000</div>
 
-            <div class="text-xs text-slate-400 mt-3">Limit / Mint</div>
+            <div class="text-xs text-slate-400 mt-3">Limit per Mint</div>
             <div id="outLimit" class="text-sm">1000</div>
 
             <div class="text-xs text-slate-400 mt-3">Minted</div>
@@ -126,7 +126,10 @@
   (function(){
     const RPC_URL = 'https://testnet-rpc.monad.xyz';
     const CONTRACT_ADDRESS = '0x07169f0F890C3595421512D98DC79b8bce6E5fA6';
-    const ABI = [...]; // same ABI as before (keep full ABI here)
+    const MAX_SUPPLY = 21000000;
+    const LIMIT_PER_MINT = 1000;
+
+    const ABI = [...]; // put full ABI here
     const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
     const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
 
@@ -152,18 +155,16 @@
       logEl.textContent = 'Loading ' + tick + ' ...';
       try {
         const info = await contract.getTokenInfo(tick);
-        const minted = info.minted.toString();
-        const maxSupply = 21000000;
-        const limitPerMint = 1000;
+        const minted = parseInt(info.minted.toString(), 10);
 
-        outMax.textContent = maxSupply.toLocaleString();
-        outLimit.textContent = limitPerMint.toString();
-        outMinted.textContent = minted;
+        outMax.textContent = MAX_SUPPLY.toLocaleString();
+        outLimit.textContent = LIMIT_PER_MINT.toString();
+        outMinted.textContent = minted.toLocaleString();
 
-        const perc = (minted / maxSupply) * 100;
+        const perc = (minted / MAX_SUPPLY) * 100;
         progressBar.style.width = perc + '%';
-        mintProgressEl.textContent = `Minted ${minted} / ${maxSupply} (${perc.toFixed(2)}%)`;
-        totalMintedEl.textContent = minted;
+        mintProgressEl.textContent = `Minted ${minted.toLocaleString()} / ${MAX_SUPPLY.toLocaleString()} (${perc.toFixed(2)}%)`;
+        totalMintedEl.textContent = minted.toLocaleString();
 
         holdersCountEl.textContent = info.holdersCount.toString();
 
