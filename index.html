@@ -1,95 +1,600 @@
-import { useState } from "react";
-import { ethers } from "ethers";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-
-const CONTRACT_ADDRESS = "0x07169f0F890C3595421512D98DC79b8bce6E5fA6";
-const RPC_URL = "https://testnet-rpc.monad.xyz";
-const ABI = [
-  // hanya ambil function penting dari ABI untuk ringkas
-  "function getTokenInfo(string tick) view returns(uint256 maxSupply, uint256 limitPerMint, uint256 minted, address deployer, uint256 holdersCount)",
-  "function getMintProgress(string tick) view returns(uint256 minted, uint256 maxSupply, uint256 percentage)",
-  "function getHolders(string tick) view returns(address[])"
-];
-
-export default function Indexer() {
-  const [tick, setTick] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [info, setInfo] = useState(null);
-  const [error, setError] = useState(null);
-
-  async function fetchData() {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const provider = new ethers.JsonRpcProvider(RPC_URL);
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-
-      const [tokenInfo, mintProgress, holders] = await Promise.all([
-        contract.getTokenInfo(tick),
-        contract.getMintProgress(tick),
-        contract.getHolders(tick)
-      ]);
-
-      setInfo({
-        tick,
-        maxSupply: tokenInfo.maxSupply.toString(),
-        limitPerMint: tokenInfo.limitPerMint.toString(),
-        minted: tokenInfo.minted.toString(),
-        deployer: tokenInfo.deployer,
-        holdersCount: tokenInfo.holdersCount.toString(),
-        holders,
-        progress: mintProgress.percentage.toString()
-      });
-    } catch (err) {
-      console.error(err);
-      setError("Token not found or RPC error");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex flex-col items-center p-8">
-      <h1 className="text-4xl font-bold mb-4">Monscription Indexer</h1>
-      <p className="mb-6 text-gray-400">Simple indexer for Monscription (Monad Testnet)</p>
-
-      <div className="flex gap-2 mb-6">
-        <Input
-          placeholder="Enter ticker e.g. MONS"
-          value={tick}
-          onChange={(e) => setTick(e.target.value)}
-          className="w-64"
-        />
-        <Button onClick={fetchData} disabled={loading}>
-          {loading ? "Loading..." : "Search"}
-        </Button>
-      </div>
-
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-
-      {info && (
-        <Card className="bg-gray-800 w-full max-w-2xl">
-          <CardContent className="p-6">
-            <h2 className="text-2xl font-semibold mb-4">Token: {info.tick}</h2>
-            <ul className="space-y-2">
-              <li><b>Max Supply:</b> {info.maxSupply}</li>
-              <li><b>Minted:</b> {info.minted} ({info.progress}%)</li>
-              <li><b>Limit per Mint:</b> {info.limitPerMint}</li>
-              <li><b>Deployer:</b> {info.deployer}</li>
-              <li><b>Holders Count:</b> {info.holdersCount}</li>
-              <li className="truncate"><b>Sample Holders:</b> {info.holders.slice(0,5).join(", ")}</li>
-            </ul>
-          </CardContent>
-        </Card>
-      )}
-
-      <footer className="mt-12 text-gray-500 text-sm">
-        Created by <a href="https://x.com/ega_2ez4crypto" target="_blank" className="underline">@ega_2ez4crypto</a> ·
-        Mint here: <a href="https://mons-mon-20.vercel.app/" target="_blank" className="underline">mons-mon-20.vercel.app</a>
-      </footer>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monscription Indexer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Orbitron:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" type="application/javascript"></script>
+    <style>
+        :root {
+            --primary: #6c42f5;
+            --primary-dark: #5a32e0;
+            --secondary: #2be4c9;
+            --dark: #0f0c1d;
+            --darker: #090715;
+            --light: #f5f5f7;
+            --gray: #8a8899;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --gradient: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: var(--darker);
+            color: var(--light);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(108, 66, 245, 0.1), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(43, 228, 201, 0.1), transparent 25%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        header {
+            padding: 30px 0;
+            text-align: center;
+            background: rgba(15, 12, 29, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .logo-icon {
+            font-size: 2.5rem;
+            color: var(--secondary);
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .logo-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .tagline {
+            font-size: 1.2rem;
+            color: var(--gray);
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        
+        .search-container {
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 18px 25px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(108, 66, 245, 0.3);
+            border-radius: 50px;
+            color: var(--light);
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        
+        .search-box:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(108, 66, 245, 0.5);
+        }
+        
+        .search-btn {
+            position: absolute;
+            right: 5px;
+            top: 5px;
+            background: var(--gradient);
+            border: none;
+            border-radius: 50px;
+            padding: 13px 25px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .search-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(108, 66, 245, 0.7);
+        }
+        
+        main {
+            padding: 50px 0;
+        }
+        
+        .token-info {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+        
+        .token-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .token-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .token-ticker {
+            background: var(--gradient);
+            padding: 5px 15px;
+            border-radius: 30px;
+            font-size: 1.2rem;
+        }
+        
+        .token-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+        
+        .detail-card {
+            background: rgba(15, 12, 29, 0.5);
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .detail-title {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .detail-value {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--light);
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .progress-container {
+            margin-top: 30px;
+        }
+        
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .progress-bar {
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 1.5s ease-in-out;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+            border: none;
+        }
+        
+        .btn-outline {
+            background: transparent;
+            color: var(--secondary);
+            border: 2px solid var(--secondary);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(108, 66, 245, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            background: rgba(255, 77, 106, 0.2);
+            border: 1px solid rgba(255, 77, 106, 0.5);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 30px 0;
+            display: none;
+        }
+        
+        .network-info {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .network-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--secondary);
+            border-radius: 50%;
+        }
+        
+        .credit {
+            text-align: center;
+            margin-top: 50px;
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+        
+        .credit a {
+            color: var(--secondary);
+            text-decoration: none;
+        }
+        
+        @media (max-width: 768px) {
+            .token-details {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-coins logo-icon"></i>
+                <h1 class="logo-text">Monscription Indexer</h1>
+            </div>
+            <p class="tagline">Explore token details on the Monad blockchain. Search by ticker to get real-time information.</p>
+            
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Enter token ticker (e.g. MONS)" autocomplete="off">
+                <button class="search-btn" id="searchBtn">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <main class="container">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Fetching token data from blockchain...</p>
+        </div>
+        
+        <div class="error-message" id="errorMessage">
+            <i class="fas fa-exclamation-circle"></i>
+            <p id="errorText">Token not found. Please check the ticker and try again.</p>
+        </div>
+        
+        <div class="token-info" id="tokenInfo">
+            <div class="token-header">
+                <h2 class="token-name">
+                    <i class="fas fa-coins"></i>
+                    <span id="tokenName">Monscription</span>
+                    <span class="token-ticker" id="tokenTicker">MONS</span>
+                </h2>
+                <div class="contract-link">
+                    <a href="#" id="contractLink" class="btn btn-outline" target="_blank">
+                        <i class="fas fa-external-link-alt"></i> View Contract
+                    </a>
+                </div>
+            </div>
+            
+            <div class="token-details">
+                <div class="detail-card">
+                    <p class="detail-title">Total Supply</p>
+                    <p class="detail-value" id="totalSupply">21,000,000</p>
+                </div>
+                
+                <div class="detail-card">
+                    <p class="detail-title">Minted</p>
+                    <p class="detail-value" id="minted">10,500,000</p>
+                </div>
+                
+                <div class="detail-card">
+                    <p class="detail-title">Limit Per Mint</p>
+                    <p class="detail-value" id="limitPerMint">1,000</p>
+                </div>
+                
+                <div class="detail-card">
+                    <p class="detail-title">Holders</p>
+                    <p class="detail-value" id="holders">1,245</p>
+                </div>
+                
+                <div class="detail-card">
+                    <p class="detail-title">Deployer</p>
+                    <p class="detail-value" id="deployer">0x5a3d...8b9e</p>
+                </div>
+                
+                <div class="detail-card">
+                    <p class="detail-title">Deployed At</p>
+                    <p class="detail-value" id="deployedAt">2 days ago</p>
+                </div>
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>Mint Progress</span>
+                    <span id="progressPercentage">50%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <a href="https://mons-mon-20.vercel.app/" class="btn btn-primary">
+                    <i class="fas fa-plus-circle"></i> Mint Token
+                </a>
+                <a href="#" class="btn btn-outline" id="holdersLink">
+                    <i class="fas fa-users"></i> View Holders
+                </a>
+                <a href="#" class="btn btn-outline">
+                    <i class="fas fa-chart-line"></i> View Analytics
+                </a>
+            </div>
+        </div>
+    </main>
+    
+    <div class="network-info">
+        <div class="network-dot"></div>
+        <span>Monad Testnet (Chain ID: 10143)</span>
     </div>
-  );
-}
+    
+    <div class="credit">
+        <p>Created by <a href="https://x.com/ega_2ez4crypto" target="_blank">@ega_2ez4crypto</a></p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Contract details
+            const contractAddress = '0x07169f0F890C3595421512D98DC79b8bce6E5fA6';
+            const contractABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"uint256","name":"maxSupply","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"indexed":false,"internalType":"address","name":"deployer","type":"address"}],"name":"Deploy","type":"event"},{"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"}],"name":"deployToken","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"emergencyWithdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"string","name":"operation","type":"string"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"data","type":"string"},{"indexed":false,"internalType":"uint256","name":"inscriptionNumber","type":"uint256"}],"name":"Inscribe","type":"event"},{"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setDeployFee","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setMintFee","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"string","name":"","type":"string"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"deployFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"tick","type":"string"}],"name":"getBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHolders","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHoldersCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getMintProgress","outputs":[{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"percentage","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTokenInfo","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"uint256","name":"holdersCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTotalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"holders","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"inscriptionCounter","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"address","name":"","type":"address"}],"name":"isHolder","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"mintFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"tokens","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"bool","name":"exists","type":"bool"},{"internalType":"uint256","name":"deployedAt","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"totalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}];
+            
+            // Network details
+            const chainId = 10143;
+            const rpcUrl = 'https://testnet-rpc.monad.xyz';
+            
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const searchBtn = document.getElementById('searchBtn');
+            const loading = document.getElementById('loading');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const tokenInfo = document.getElementById('tokenInfo');
+            
+            // Connect to blockchain
+            let provider, contract;
+            
+            try {
+                provider = new ethers.providers.JsonRpcProvider(rpcUrl, chainId);
+                contract = new ethers.Contract(contractAddress, contractABI, provider);
+            } catch (error) {
+                console.error('Error connecting to blockchain:', error);
+                showError('Failed to connect to blockchain. Please check your network connection.');
+            }
+            
+            // Event listeners
+            searchBtn.addEventListener('click', searchToken);
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchToken();
+                }
+            });
+            
+            // Function to search for token
+            async function searchToken() {
+                const ticker = searchInput.value.trim().toUpperCase();
+                
+                if (!ticker) {
+                    showError('Please enter a token ticker');
+                    return;
+                }
+                
+                showLoading();
+                hideError();
+                hideTokenInfo();
+                
+                try {
+                    // Check if token exists
+                    const tokenExists = await contract.tokens(ticker);
+                    
+                    if (!tokenExists.exists) {
+                        showError(`Token "${ticker}" not found. Please check the ticker and try again.`);
+                        hideLoading();
+                        return;
+                    }
+                    
+                    // Get token info
+                    const tokenInfoData = await contract.getTokenInfo(ticker);
+                    
+                    // Format numbers with commas
+                    const formatNumber = (num) => {
+                        return parseInt(num).toLocaleString();
+                    };
+                    
+                    // Shorten address for display
+                    const shortenAddress = (address) => {
+                        return address.substring(0, 6) + '...' + address.substring(address.length - 4);
+                    };
+                    
+                    // Calculate time since deployment
+                    const currentTime = Math.floor(Date.now() / 1000);
+                    const deployedAt = parseInt(tokenInfoData.deployedAt);
+                    const timeDiff = currentTime - deployedAt;
+                    
+                    let timeAgo;
+                    if (timeDiff < 3600) {
+                        timeAgo = Math.floor(timeDiff / 60) + ' minutes ago';
+                    } else if (timeDiff < 86400) {
+                        timeAgo = Math.floor(timeDiff / 3600) + ' hours ago';
+                    } else {
+                        timeAgo = Math.floor(timeDiff / 86400) + ' days ago';
+                    }
+                    
+                    // Update UI with token info
+                    document.getElementById('tokenName').textContent = ticker;
+                    document.getElementById('tokenTicker').textContent = ticker;
+                    document.getElementById('totalSupply').textContent = formatNumber(tokenInfoData.maxSupply);
+                    document.getElementById('minted').textContent = formatNumber(tokenInfoData.minted);
+                    document.getElementById('limitPerMint').textContent = formatNumber(tokenInfoData.limitPerMint);
+                    document.getElementById('holders').textContent = formatNumber(tokenInfoData.holdersCount);
+                    document.getElementById('deployer').textContent = shortenAddress(tokenInfoData.deployer);
+                    document.getElementById('deployedAt').textContent = timeAgo;
+                    
+                    // Update progress bar
+                    const progressPercentage = (tokenInfoData.minted / tokenInfoData.maxSupply) * 100;
+                    document.getElementById('progressPercentage').textContent = progressPercentage.toFixed(2) + '%';
+                    document.getElementById('progressFill').style.width = progressPercentage + '%';
+                    
+                    // Update links
+                    document.getElementById('contractLink').href = `https://testnet.monadexplorer.com/address/${contractAddress}`;
+                    document.getElementById('holdersLink').href = `https://testnet.monadexplorer.com/token/${ticker}/holders`;
+                    
+                    // Show token info
+                    hideLoading();
+                    showTokenInfo();
+                    
+                } catch (error) {
+                    console.error('Error fetching token info:', error);
+                    showError('Failed to fetch token information. Please try again later.');
+                    hideLoading();
+                }
+            }
+            
+            // UI helper functions
+            function showLoading() {
+                loading.style.display = 'block';
+            }
+            
+            function hideLoading() {
+                loading.style.display = 'none';
+            }
+            
+            function showError(message) {
+                errorText.textContent = message;
+                errorMessage.style.display = 'block';
+            }
+            
+            function hideError() {
+                errorMessage.style.display = 'none';
+            }
+            
+            function showTokenInfo() {
+                tokenInfo.style.display = 'block';
+            }
+            
+            function hideTokenInfo() {
+                tokenInfo.style.display = 'none';
+            }
+            
+            // Pre-populate with MONS if the URL has a query parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const tickerParam = urlParams.get('ticker');
+            if (tickerParam) {
+                searchInput.value = tickerParam;
+                searchToken();
+            }
+        });
+    </script>
+</body>
+</html>
