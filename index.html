@@ -1,301 +1,340 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Monscription Indexer</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.11/dayjs.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Monscription Indexer — MONS (Monad Testnet)</title>
+  <meta name="description" content="Indexer for Monscription tokens on Monad Testnet — enter ticker, get supply, holders, top-holders, mint progress." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <style>
-    :root { --bg: #0b0f19; --card:#121829; --muted:#9aa4bf; --primary:#6ee7b7; --accent:#8b5cf6; }
-    html, body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'; background: linear-gradient(180deg, #0b0f19 0%, #0e1424 100%); color: #e5e7eb; min-height: 100%; }
-    .glass { background: rgba(18, 24, 41, 0.75); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
-    .shine { background: radial-gradient(1000px 500px at 20% -20%, rgba(139,92,246,0.25), transparent 70%), radial-gradient(800px 400px at 120% 0%, rgba(110,231,183,0.2), transparent 70%); }
-    .gradient-text { background: linear-gradient(90deg, var(--primary), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    .badge { border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); }
-    .scroll-table { max-height: 520px; overflow: auto; }
+    :root{--bg:#0b1020;--card:#0f1724;--muted:#9aa4bf;--accent:#8b5cf6;--glass:rgba(255,255,255,0.04)}
+    *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#020617 0%, #07102a 60%);color:#e6eef8}
+    .wrap{max-width:1100px;margin:36px auto;padding:28px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .brand{display:flex;gap:16px;align-items:center}
+    .logo{width:64px;height:64px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#4f46e5);display:grid;place-items:center;font-weight:800;font-size:20px}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:0;color:var(--muted)}
+
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:20px;box-shadow:0 10px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+
+    .controls{display:flex;gap:12px;margin-top:18px}
+    input[type=text]{background:var(--glass);border:1px solid rgba(255,255,255,0.04);padding:12px 14px;border-radius:10px;color:inherit;width:220px}
+    button{background:linear-gradient(90deg,var(--accent),#4f46e5);border:none;padding:10px 16px;border-radius:10px;color:white;font-weight:600;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-top:20px}
+    .stat{display:flex;justify-content:space-between;align-items:center;padding:14px;border-radius:10px;background:rgba(255,255,255,0.02)}
+    .stat h3{margin:0;font-size:13px;color:var(--muted)}
+    .stat p{margin:6px 0 0;font-size:18px;font-weight:700}
+
+    .progress{height:14px;background:rgba(255,255,255,0.04);border-radius:10px;overflow:hidden}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,#22c55e, #06b6d4);width:0%}
+
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:10px;text-align:left;font-size:14px}
+    tr + tr td{border-top:1px dashed rgba(255,255,255,0.03)}
+
+    footer{margin-top:26px;color:var(--muted);font-size:13px}
+    .right{display:flex;gap:10px;align-items:center}
+
+    .muted{color:var(--muted)}
+    .big{font-size:24px;font-weight:800}
+
+    @media (max-width:900px){.grid{grid-template-columns:1fr}.controls{flex-direction:column;align-items:flex-start}input[type=text]{width:100%}}
   </style>
 </head>
-<body class="shine">
-  <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-6">
-    <div class="flex items-center justify-between">
-      <div>
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full badge text-sm text-slate-300">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Monad Testnet • Chain ID 10143</span>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">M</div>
+        <div>
+          <h1>Monscription Indexer — Monad Testnet</h1>
+          <p class="lead">Enter a ticker (e.g. <strong>MONS</strong>) to fetch supply, holders, top holders and mint progress.</p>
         </div>
-        <h1 class="mt-4 text-3xl sm:text-5xl font-extrabold leading-tight">
-          <span class="gradient-text">Monscription</span> Token Indexer
-        </h1>
-        <p class="mt-2 text-slate-300 max-w-2xl">Enter a ticker to view live token stats: max supply, holders, top holders, mint progress, and more. Display uses <span class="font-semibold">18 decimals</span> for consistency.</p>
       </div>
-      <a href="https://mons-mon-20.vercel.app/" target="_blank" class="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-2xl glass hover:scale-[1.02] transition shadow-lg">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.5 4.5L21 12l-7.5 7.5M21 12H3" /></svg>
-        <span class="font-medium">Mint MONS</span>
-      </a>
+      <div class="right muted">
+        <div>Created by <a href="https://x.com/ega_2ez4crypto" target="_blank" style="color:inherit;text-decoration:underline">@ega_2ez4crypto</a></div>
+        <a href="https://mons-mon-20.vercel.app/" target="_blank"><button class="ghost">Mint page</button></a>
+      </div>
+    </header>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="flex:1">
+          <label class="muted">Ticker</label>
+          <div class="controls">
+            <input id="ticker" type="text" value="MONS" />
+            <button id="btnFetch">Fetch token</button>
+            <button id="btnClear" class="ghost">Clear</button>
+          </div>
+        </div>
+        <div style="min-width:260px;text-align:right">
+          <div class="muted">Contract</div>
+          <div style="margin-top:6px"><a id="contractLink" href="#" target="_blank" class="muted" style="text-decoration:underline;">0x0716...5fA6</a></div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px">
+            <div class="stat"><div><h3>Total minted</h3><p id="minted" class="big">-</p></div></div>
+            <div class="stat"><div><h3>Max supply</h3><p id="maxSupply" class="big">-</p></div></div>
+            <div class="stat"><div><h3>Holders</h3><p id="holdersCount" class="big">-</p></div></div>
+          </div>
+
+          <div style="margin-top:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><div class="muted">Mint progress</div><div id="pct" class="muted">-</div></div>
+            <div class="progress" style="margin-top:8px"><i id="progressBar"></i></div>
+          </div>
+
+          <section style="margin-top:18px">
+            <h3 style="margin:0 0 8px 0;color:var(--muted)">Top holders (by balance)</h3>
+            <div id="holdersBox" class="card" style="padding:8px;background:transparent;border:0">
+              <table id="holdersTable"><thead><tr><th>Address</th><th>Balance</th><th>% of max supply</th></tr></thead><tbody><tr><td colspan="3" class="muted">No data yet</td></tr></tbody></table>
+            </div>
+          </section>
+
+          <section style="margin-top:18px">
+            <h3 style="margin:0 0 8px 0;color:var(--muted)">Recent metrics</h3>
+            <table>
+              <tr><td class="muted">Inscription counter (global)</td><td id="inscriptions">-</td></tr>
+              <tr><td class="muted">Deployer</td><td id="deployer">-</td></tr>
+            </table>
+          </section>
+
+        </div>
+        <aside>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="card">
+              <h3 style="margin:0;color:var(--muted)">Network</h3>
+              <p style="margin:8px 0 0 0" class="muted">Monad Testnet</p>
+              <p style="margin:6px 0 0 0" class="muted">Chain ID: 10143</p>
+              <p style="margin:6px 0 0 0" class="muted">RPC: https://testnet-rpc.monad.xyz</p>
+            </div>
+
+            <div class="card">
+              <h3 style="margin:0 0 8px 0;color:var(--muted)">Quick actions</h3>
+              <button id="copyContract" class="ghost">Copy contract address</button>
+              <a id="openExplorer" href="#" target="_blank"><button class="ghost">Open on explorer</button></a>
+            </div>
+
+            <div class="card">
+              <h3 style="margin:0 0 8px 0;color:var(--muted)">Notes</h3>
+              <p class="muted" style="font-size:13px;margin:0">This contract is not standard ERC20. All data is read through the custom view methods provided in the ABI. Numbers are displayed using 18 decimals for fixed presentation.</p>
+            </div>
+
+          </div>
+        </aside>
+      </div>
+
     </div>
-  </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-    <!-- Search Card -->
-    <section class="glass rounded-3xl p-6 sm:p-8 shadow-xl">
-      <div class="grid md:grid-cols-[1fr_auto_auto] gap-4 md:gap-6 items-end">
-        <div>
-          <label for="ticker" class="block text-sm text-slate-300 mb-2">Ticker</label>
-          <input id="ticker" type="text" placeholder="e.g. MONS" class="w-full px-4 py-3 rounded-2xl bg-[#0d1322] border border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-400/40 placeholder-slate-500" />
-          <p class="mt-2 text-xs text-slate-400">Case-sensitive if the contract enforces it. Uses 18 decimals for display.</p>
-        </div>
-        <div class="flex gap-3">
-          <button id="btnFetch" class="px-5 py-3 rounded-2xl bg-emerald-500/90 hover:bg-emerald-400 text-black font-semibold shadow-lg">Fetch</button>
-          <button id="btnDemo" class="px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-semibold shadow-lg">Try MONS</button>
-        </div>
-        <div class="text-right hidden md:block">
-          <div class="text-xs text-slate-400">Contract</div>
-          <a id="contractLink" href="#" target="_blank" class="text-sm hover:underline">0x07169f0F890C3595421512D98DC79b8bce6E5fA6</a>
-        </div>
-      </div>
-      <div id="status" class="mt-4 text-sm text-slate-300"></div>
-    </section>
-
-    <!-- Stats -->
-    <section class="mt-8 grid md:grid-cols-4 gap-4 md:gap-6">
-      <div class="glass rounded-3xl p-6">
-        <div class="text-slate-400 text-sm">Ticker</div>
-        <div id="uiTick" class="mt-1 text-2xl font-bold">—</div>
-      </div>
-      <div class="glass rounded-3xl p-6">
-        <div class="text-slate-400 text-sm">Max Supply</div>
-        <div id="uiMaxSupply" class="mt-1 text-2xl font-bold">—</div>
-      </div>
-      <div class="glass rounded-3xl p-6">
-        <div class="text-slate-400 text-sm">Total Minted</div>
-        <div id="uiMinted" class="mt-1 text-2xl font-bold">—</div>
-      </div>
-      <div class="glass rounded-3xl p-6">
-        <div class="text-slate-400 text-sm">Holders</div>
-        <div id="uiHoldersCount" class="mt-1 text-2xl font-bold">—</div>
-      </div>
-    </section>
-
-    <!-- Progress -->
-    <section class="mt-6 glass rounded-3xl p-6">
-      <div class="flex items-center justify-between gap-4">
-        <div>
-          <div class="text-slate-400 text-sm">Mint Progress</div>
-          <div class="mt-1 text-xl font-semibold"><span id="uiProgressPct">—</span></div>
-        </div>
-        <a href="https://mons-mon-20.vercel.app/" target="_blank" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm">Mint Page</a>
-      </div>
-      <div class="mt-4 w-full h-3 bg-white/10 rounded-full overflow-hidden">
-        <div id="uiProgressBar" class="h-3 bg-gradient-to-r from-emerald-400 to-fuchsia-500 rounded-full transition-all" style="width:0%"></div>
-      </div>
-      <div class="mt-2 text-xs text-slate-400">Minted <span id="uiProgressMinted">—</span> / <span id="uiProgressMax">—</span></div>
-    </section>
-
-    <!-- Holders -->
-    <section class="mt-6 grid lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 glass rounded-3xl p-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold">Top Holders</h2>
-          <div class="text-xs text-slate-400">Showing top <span id="uiTopN">—</span> by balance</div>
-        </div>
-        <div class="mt-4 scroll-table rounded-2xl border border-white/10">
-          <table class="min-w-full text-sm">
-            <thead class="bg-white/5 sticky top-0">
-              <tr>
-                <th class="text-left px-4 py-3 font-medium">#</th>
-                <th class="text-left px-4 py-3 font-medium">Address</th>
-                <th class="text-right px-4 py-3 font-medium">Balance</th>
-                <th class="text-right px-4 py-3 font-medium">% of Minted</th>
-              </tr>
-            </thead>
-            <tbody id="holdersTable" class="divide-y divide-white/5"></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="glass rounded-3xl p-6">
-        <h2 class="text-lg font-semibold">Token Info</h2>
-        <dl class="mt-3 space-y-3 text-sm">
-          <div class="flex justify-between"><dt class="text-slate-400">Deployer</dt><dd id="uiDeployer" class="font-mono">—</dd></div>
-          <div class="flex justify-between"><dt class="text-slate-400">Limit Per Mint</dt><dd id="uiLimitPerMint">—</dd></div>
-          <div class="flex justify-between"><dt class="text-slate-400">Deploy Fee</dt><dd id="uiDeployFee">—</dd></div>
-          <div class="flex justify-between"><dt class="text-slate-400">Mint Fee</dt><dd id="uiMintFee">—</dd></div>
-          <div class="flex justify-between"><dt class="text-slate-400">Inscription #</dt><dd id="uiInscCounter">—</dd></div>
-        </dl>
-        <p class="mt-4 text-xs text-slate-400">All values are formatted with 18 decimals.</p>
-      </div>
-    </section>
-
-    <footer class="mt-10 text-center text-sm text-slate-400">
-      Created by <a href="https://x.com/ega_2ez4crypto" class="underline" target="_blank">@ega_2ez4crypto</a> • Powered by Monad Testnet • Contract: 0x07169f0F890C3595421512D98DC79b8bce6E5fA6
+    <footer>
+      <div>Indexer built for public release. Credit: <a href="https://x.com/ega_2ez4crypto" target="_blank">@ega_2ez4crypto</a> — Mint link: <a href="https://mons-mon-20.vercel.app/" target="_blank">mons-mon-20.vercel.app</a></div>
     </footer>
-  </main>
+  </div>
 
   <script>
-    const RPC_URL = 'https://testnet-rpc.monad.xyz';
-    const CHAIN_ID = 10143; // Monad Testnet
-    const CONTRACT_ADDRESS = '0x07169f0F890C3595421512D98DC79b8bce6E5fA6';
-
+    // Configuration
+    const RPC = 'https://testnet-rpc.monad.xyz'
+    const CHAIN_ID = 10143
+    const CONTRACT_ADDRESS = '0x07169f0F890C3595421512D98DC79b8bce6E5fA6'
     const ABI = [
-	{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
-	{"anonymous":false,"inputs":[{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"uint256","name":"maxSupply","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"indexed":false,"internalType":"address","name":"deployer","type":"address"}],"name":"Deploy","type":"event"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"}],"name":"deployToken","outputs":[],"stateMutability":"payable","type":"function"},
-	{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"emergencyWithdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
-	{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"string","name":"operation","type":"string"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"data","type":"string"},{"indexed":false,"internalType":"uint256","name":"inscriptionNumber","type":"uint256"}],"name":"Inscribe","type":"event"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"payable","type":"function"},
-	{"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setDeployFee","outputs":[],"stateMutability":"nonpayable","type":"function"},
-	{"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setMintFee","outputs":[],"stateMutability":"nonpayable","type":"function"},
-	{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[],"stateMutability":"nonpayable","type":"function"},
-	{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
-	{"stateMutability":"payable","type":"receive"},
-	{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"string","name":"","type":"string"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[],"name":"deployFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"tick","type":"string"}],"name":"getBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHolders","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHoldersCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getMintProgress","outputs":[{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"percentage","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTokenInfo","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"uint256","name":"holdersCount","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTotalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"holders","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
-	{"inputs":[],"name":"inscriptionCounter","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"address","name":"","type":"address"}],"name":"isHolder","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
-	{"inputs":[],"name":"mintFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"tokens","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"bool","name":"exists","type":"bool"},{"internalType":"uint256","name":"deployedAt","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"totalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
-];
+      {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
+      {"anonymous":false,"inputs":[{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"uint256","name":"maxSupply","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"indexed":false,"internalType":"address","name":"deployer","type":"address"}],"name":"Deploy","type":"event"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"}],"name":"deployToken","outputs":[],"stateMutability":"payable","type":"function"},
+      {"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"emergencyWithdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"string","name":"operation","type":"string"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"data","type":"string"},{"indexed":false,"internalType":"uint256","name":"inscriptionNumber","type":"uint256"}],"name":"Inscribe","type":"event"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"payable","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setDeployFee","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setMintFee","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"stateMutability":"payable","type":"receive"},
+      {"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"string","name":"","type":"string"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"deployFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"tick","type":"string"}],"name":"getBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"getHolders","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHolders","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHoldersCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getMintProgress","outputs":[{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"percentage","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTokenInfo","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"uint256","name":"holdersCount","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTotalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"holders","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"inscriptionCounter","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"address","name":"","type":"address"}],"name":"isHolder","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"mintFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"tokens","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"bool","name":"exists","type":"bool"},{"internalType":"uint256","name":"deployedAt","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"totalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+    ];
 
-    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+    // Setup provider & contract
+    const provider = new ethers.providers.JsonRpcProvider(RPC);
     const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
 
-    // UI helpers
-    const el = (id) => document.getElementById(id);
-    const fmt = (bn) => {
-      try { return ethers.utils.formatUnits(bn || '0', 18); } catch { return '0'; }
-    };
-    const fmtShort = (bn) => {
-      const n = Number(fmt(bn));
-      if (!isFinite(n)) return '0';
-      if (n >= 1e12) return (n/1e12).toFixed(2)+"T";
-      if (n >= 1e9) return (n/1e9).toFixed(2)+"B";
-      if (n >= 1e6) return (n/1e6).toFixed(2)+"M";
-      if (n >= 1e3) return (n/1e3).toFixed(2)+"K";
-      return n.toLocaleString(undefined, { maximumFractionDigits: 6 });
-    };
-    const pct = (num, den) => {
-      const n = Number(fmt(num));
-      const d = Number(fmt(den));
-      if (d === 0) return 0;
-      return (n / d) * 100;
-    };
+    // DOM
+    const tickerInput = document.getElementById('ticker');
+    const btnFetch = document.getElementById('btnFetch');
+    const btnClear = document.getElementById('btnClear');
+    const mintedEl = document.getElementById('minted');
+    const maxSupplyEl = document.getElementById('maxSupply');
+    const holdersCountEl = document.getElementById('holdersCount');
+    const progressBar = document.getElementById('progressBar');
+    const pctEl = document.getElementById('pct');
+    const holdersTableBody = document.querySelector('#holdersTable tbody');
+    const inscriptionsEl = document.getElementById('inscriptions');
+    const deployerEl = document.getElementById('deployer');
+    const contractLink = document.getElementById('contractLink');
+    const copyContractBtn = document.getElementById('copyContract');
+    const openExplorer = document.getElementById('openExplorer');
 
-    async function loadFeesAndCounter() {
-      try {
-        const [deployFee, mintFee, insc] = await Promise.all([
-          contract.deployFee(),
-          contract.mintFee(),
-          contract.inscriptionCounter()
-        ]);
-        el('uiDeployFee').textContent = fmt(deployFee);
-        el('uiMintFee').textContent = fmt(mintFee);
-        el('uiInscCounter').textContent = ethers.BigNumber.isBigNumber(insc) ? insc.toString() : String(insc);
-      } catch (e) {
-        console.warn('loadFees error', e);
+    contractLink.href = 'https://testnet.monadscan.io/address/' + CONTRACT_ADDRESS;
+    openExplorer.href = 'https://testnet.monadscan.io/address/' + CONTRACT_ADDRESS;
+
+    btnFetch.addEventListener('click', fetchTicker);
+    btnClear.addEventListener('click', ()=>{tickerInput.value='';resetDisplay()});
+    copyContractBtn.addEventListener('click', ()=>{navigator.clipboard.writeText(CONTRACT_ADDRESS).then(()=>alert('Contract copied'))});
+
+    function resetDisplay(){
+      mintedEl.textContent='-';maxSupplyEl.textContent='-';holdersCountEl.textContent='-';pctEl.textContent='-';progressBar.style.width='0%';holdersTableBody.innerHTML='<tr><td colspan="3" class="muted">No data yet</td></tr>';inscriptionsEl.textContent='-';deployerEl.textContent='-';
+    }
+
+    function format18(bigNumber){
+      try{
+        // bigNumber may be BigNumber or number string
+        const bn = ethers.BigNumber.from(bigNumber.toString());
+        // convert to string with 18 decimals
+        const base = ethers.constants.WeiPerEther; // 10^18
+        const whole = bn.div(base).toString();
+        const rem = bn.mod(base).toString().padStart(18,'0');
+        // trim trailing zeros in fraction but keep at least 6 for readability, or show fixed 18 as requested
+        // User requested 18 decimal fixed display -> we show fixed 18 decimals but trim when .000... -> keep as is
+        return whole + '.' + rem; // fixed 18 decimal places
+      }catch(e){
+        return String(bigNumber);
       }
     }
 
-    async function fetchTicker(tick) {
-      el('status').textContent = 'Fetching on-chain data…';
-      el('holdersTable').innerHTML = '';
-      el('uiTopN').textContent = '—';
+    async function fetchTicker(){
+      const tick = tickerInput.value.trim();
+      if(!tick){alert('Please enter a ticker');return}
 
-      try {
-        // Basic data
-        const [info, progress] = await Promise.all([
-          contract.getTokenInfo(tick),
-          contract.getMintProgress(tick)
-        ]);
+      try{
+        btnFetch.disabled = true; btnFetch.textContent='Fetching...';
 
-        const maxSupply = info.maxSupply; // 18d
-        const minted = info.minted; // 18d
-        const limitPerMint = info.limitPerMint; // 18d
-        const deployer = info.deployer;
-        const holdersCount = info.holdersCount;
+        // getTokenInfo
+        const info = await contract.getTokenInfo(tick);
+        // info = [maxSupply, limitPerMint, minted, deployer, holdersCount]
+        const maxSupply = info.maxSupply ?? info[0];
+        const limitPerMint = info.limitPerMint ?? info[1];
+        const minted = info.minted ?? info[2];
+        const deployer = info.deployer ?? info[3];
+        const holdersCount = info.holdersCount ?? info[4];
 
-        // Update stat cards
-        el('uiTick').textContent = tick;
-        el('uiMaxSupply').textContent = fmtShort(maxSupply);
-        el('uiMinted').textContent = fmtShort(minted);
-        el('uiHoldersCount').textContent = ethers.BigNumber.isBigNumber(holdersCount) ? holdersCount.toString() : String(holdersCount);
-        el('uiDeployer').textContent = deployer;
-        el('uiLimitPerMint').textContent = fmtShort(limitPerMint);
-
-        // Progress
-        const mintedNum = Number(fmt(progress.minted));
-        const maxNum = Number(fmt(progress.maxSupply));
-        const percent = maxNum > 0 ? Math.min(100, (mintedNum / maxNum) * 100) : 0;
-        el('uiProgressPct').textContent = percent.toFixed(2) + '%';
-        el('uiProgressBar').style.width = percent.toFixed(2) + '%';
-        el('uiProgressMinted').textContent = fmtShort(progress.minted);
-        el('uiProgressMax').textContent = fmtShort(progress.maxSupply);
-
-        // Holders + Top holders
-        const holders = await contract.getHolders(tick);
-        el('uiHoldersCount').textContent = holders.length.toString();
-
-        // Fetch balances in batches to avoid spamming
-        const batchSize = 50;
-        const balances = [];
-        for (let i = 0; i < holders.length; i += batchSize) {
-          const chunk = holders.slice(i, i + batchSize);
-          const res = await Promise.all(chunk.map(addr => contract.getBalance(addr, tick)));
-          res.forEach((bal, idx) => balances.push({ address: chunk[idx], balance: bal }));
+        // getMintProgress
+        let mintedProgress = null, maxSupplyProgress = null, percent = null;
+        try{
+          const prog = await contract.getMintProgress(tick);
+          mintedProgress = prog.minted ?? prog[0];
+          maxSupplyProgress = prog.maxSupply ?? prog[1];
+          percent = prog.percentage ?? prog[2];
+        }catch(e){
+          // fallback to getTotalMinted
+          try{ mintedProgress = await contract.getTotalMinted(tick); }catch(e2){}
+          maxSupplyProgress = maxSupply;
         }
 
-        // Sort & render top N
-        balances.sort((a, b) => (ethers.BigNumber.from(b.balance)).sub(a.balance).toString());
-        const topN = 50; // show up to 50
-        const mintedBN = minted;
-        const tbody = el('holdersTable');
-        const rows = (balances.slice(0, topN)).map((item, i) => {
-          const share = pct(item.balance, mintedBN);
-          return `<tr class="hover:bg-white/5">
-              <td class="px-4 py-3 text-slate-400">${i+1}</td>
-              <td class="px-4 py-3 font-mono">${item.address}</td>
-              <td class="px-4 py-3 text-right">${fmtShort(item.balance)}</td>
-              <td class="px-4 py-3 text-right">${share.toFixed(4)}%</td>
-            </tr>`;
-        }).join('');
-        tbody.innerHTML = rows || `<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400">No holders yet.</td></tr>`;
-        el('uiTopN').textContent = Math.min(topN, balances.length).toString();
+        // inscriptionCounter
+        let insc = '-';
+        try{ insc = await contract.inscriptionCounter(); }catch(e){}
 
-        el('status').innerHTML = '<span class="text-emerald-400">✓</span> Done.';
-      } catch (err) {
-        console.error(err);
-        el('status').innerHTML = `<span class="text-rose-400">Failed:</span> ${err?.message || err}`;
+        // holders list
+        let holders = [];
+        try{ holders = await contract.getHolders(tick); }catch(e){ holders = [] }
+
+        // compute balances for top holders (we will fetch balances via getBalance(address,tick))
+        const balances = [];
+        for(let i=0;i<holders.length;i++){
+          const addr = holders[i];
+          try{
+            const b = await contract.getBalance(addr, tick);
+            balances.push({address:addr, balance:b});
+          }catch(e){balances.push({address:addr, balance:ethers.BigNumber.from(0)})}
+        }
+
+        // sort desc
+        balances.sort((a,b)=>{ return ethers.BigNumber.from(b.balance).sub(ethers.BigNumber.from(a.balance)).toNumber() });
+
+        // update UI (use 18 decimals fixed as requested)
+        mintedEl.textContent = format18(minted ?? mintedProgress ?? 0);
+        maxSupplyEl.textContent = format18(maxSupply ?? maxSupplyProgress ?? 0);
+        holdersCountEl.textContent = (holdersCount && holdersCount.toString) ? holdersCount.toString() : (holders.length||0).toString();
+
+        // percent display prefer percentage from getMintProgress if available
+        let percentNumber = null;
+        if(percent!=null && percent!==undefined){
+          percentNumber = Number(percent.toString());
+        }else if(maxSupply && minted){
+          try{
+            const bnMint = ethers.BigNumber.from(minted.toString());
+            const bnMax = ethers.BigNumber.from(maxSupply.toString());
+            percentNumber = bnMax.isZero() ? 0 : Number(bnMint.mul(10000).div(bnMax).toNumber())/100; // two decimals
+          }catch(e){percentNumber = 0}
+        }
+
+        pctEl.textContent = percentNumber!==null? (percentNumber + '%') : '-';
+        progressBar.style.width = (percentNumber!==null? Math.min(100,percentNumber) : 0) + '%';
+
+        // populate holders table (top 20 or available)
+        holdersTableBody.innerHTML = '';
+        const totalBase = ethers.BigNumber.from(maxSupply ?? maxSupplyProgress ?? 0);
+        const topN = Math.min(20, balances.length);
+        if(topN===0){holdersTableBody.innerHTML='<tr><td colspan="3" class="muted">No holders found for this ticker</td></tr>'}
+        for(let i=0;i<topN;i++){
+          const row = balances[i];
+          const addr = row.address;
+          const bal = ethers.BigNumber.from(row.balance.toString());
+          const balStr = format18(bal);
+          // percent of max supply
+          let pctOfMax = '-';
+          if(!totalBase.isZero()){
+            // compute with 6 decimals: (bal / totalBase)*100
+            try{
+              const pctBN = bal.mul(1000000).div(totalBase); // x 1e6
+              const intPart = pctBN.div(10000).toString();
+              const fracPart = pctBN.mod(10000).toString().padStart(4,'0');
+              pctOfMax = intPart + '.' + fracPart + '%';
+            }catch(e){pctOfMax='-'}
+          }
+
+          const tr = document.createElement('tr');
+          const tdAddr = document.createElement('td'); tdAddr.textContent = addr; tdAddr.style.fontFamily='monospace'; tdAddr.style.fontSize='13px';
+          const tdBal = document.createElement('td'); tdBal.textContent = balStr;
+          const tdPct = document.createElement('td'); tdPct.textContent = pctOfMax;
+          tr.appendChild(tdAddr);tr.appendChild(tdBal);tr.appendChild(tdPct);
+          holdersTableBody.appendChild(tr);
+        }
+
+        // extras
+        inscriptionsEl.textContent = insc.toString ? insc.toString() : String(insc);
+        deployerEl.textContent = deployer ? deployer.toString() : '-';
+
+      }catch(err){
+        console.error(err);alert('Failed to fetch token data: '+(err && err.message?err.message:err));
+      }finally{
+        btnFetch.disabled = false; btnFetch.textContent='Fetch token';
       }
     }
 
-    // Wire up UI
-    document.addEventListener('DOMContentLoaded', () => {
-      el('contractLink').href = '#';
-      loadFeesAndCounter();
-      el('btnDemo').addEventListener('click', () => {
-        el('ticker').value = 'MONS';
-        fetchTicker('MONS');
-      });
-      el('btnFetch').addEventListener('click', () => {
-        const t = (el('ticker').value || '').trim();
-        if (!t) { el('status').textContent = 'Please enter a ticker (e.g., MONS).'; return; }
-        fetchTicker(t);
-      });
-      // Auto-suggest demo ticker
-      el('ticker').value = 'MONS';
-    });
+    // initial fetch on load for default
+    window.addEventListener('load', ()=>{fetchTicker()});
   </script>
 </body>
 </html>
