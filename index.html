@@ -1,182 +1,104 @@
-<!doctype html>
-<html lang="en" class="dark">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Monscription Indexer — Simple (MONAD Testnet)</title>
-  <meta name="description" content="Simple indexer for Monscription (Monad Testnet) - check token info, holders, minted supply, progress, etc." />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%230af'%3E%3C/circle%3E%3Ctext x='50' y='58' font-size='50' text-anchor='middle' fill='white' font-family='Arial'%3EM%3C/text%3E%3C/svg%3E" />
-
-  <!-- Tailwind -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Ethers v5 UMD -->
+  <meta charset="UTF-8">
+  <title>Monascription Indexer</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-
   <style>
-    :root { color-scheme: dark; }
-    body { background: linear-gradient(180deg,#05060a 0%, #071027 60%); }
-    .glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.04) }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; }
-    .chip  { padding:.125rem .5rem; border-radius:999px; font-size:.7rem; }
+    body { font-family: Arial, sans-serif; background: #0d1117; color: #fff; margin:0; padding:20px; }
+    .card { background:#161b22; padding:20px; border-radius:12px; margin-bottom:20px; box-shadow:0 0 10px rgba(0,0,0,0.5);}
+    .progress { background:#333; border-radius:8px; overflow:hidden; height:20px; margin-top:5px; }
+    .progress-bar { background:#1f6feb; height:100%; width:0%; transition:width 0.5s; }
+    .hidden { display:none; }
+    button { padding:8px 16px; border:none; border-radius:8px; background:#238636; color:#fff; cursor:pointer; margin-right:5px; }
+    input { padding:8px; border-radius:8px; border:1px solid #333; background:#0d1117; color:#fff; }
+    ul { max-height:150px; overflow:auto; background:#0d1117; padding:10px; border-radius:8px; }
   </style>
 </head>
-<body class="min-h-screen text-slate-200">
-  <header class="max-w-6xl mx-auto p-6 flex items-center gap-4">
-    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-cyan-400 to-emerald-400 grid place-items-center font-black text-black">M</div>
-    <div>
-      <h1 class="text-2xl font-bold">Monscription Indexer <span class="text-sm ml-2 text-slate-400">Monad Testnet</span></h1>
-      <div class="text-xs text-slate-400">
-        Created by <a href="https://x.com/ega_2ez4crypto" target="_blank" class="underline">@ega_2ez4crypto</a> • 
-        <a href="https://mons-mon-20.vercel.app/" target="_blank" class="underline">Mint Portal</a>
-      </div>
+<body>
+  <h2>Monascription Indexer</h2>
+  <p>RPC: <span id="rpcUrl"></span></p>
+
+  <div>
+    <input type="text" id="tickInput" placeholder="Enter tick (e.g. MONS)">
+    <button id="searchBtn">Search</button>
+    <button id="btnMons">Show MONS</button>
+  </div>
+
+  <div id="summary" class="card hidden">
+    <h3><span id="outTick"></span></h3>
+    <p><b>Deployer:</b> <span id="outDeployer"></span></p>
+    <p><b>Max Supply:</b> <span id="outMax"></span></p>
+    <p><b>Limit per Mint:</b> <span id="outLimit"></span></p>
+    <p><b>Minted:</b> <span id="outMinted"></span></p>
+    <div class="progress">
+      <div class="progress-bar" id="progressBar"></div>
     </div>
-    <div class="ml-auto flex items-center gap-3">
-      <a href="https://mons-mon-20.vercel.app/" target="_blank" class="chip bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Mint Link</a>
-      <button id="connectBtn" class="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-sm">Connect Wallet</button>
-    </div>
-  </header>
+    <p id="mintProgress"></p>
+  </div>
 
-  <main class="max-w-6xl mx-auto p-6 grid lg:grid-cols-3 gap-6">
-    <!-- Main Info -->
-    <section class="lg:col-span-2 glass rounded-2xl p-5">
-      <div class="flex items-center gap-3 mb-4">
-        <input id="tickInput" placeholder="Enter tick (e.g. MONS)" class="flex-1 bg-transparent border border-white/10 rounded-xl px-4 py-3 placeholder:text-slate-500" />
-        <button id="searchBtn" class="px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 font-semibold">Search</button>
-        <button id="clearBtn" title="Reset view" class="px-3 py-2 rounded-md bg-white/10">Reset</button>
-      </div>
+  <div id="extra" class="card hidden">
+    <p><b>Holders Count:</b> <span id="holdersCount"></span></p>
+    <ul id="holdersList"></ul>
+    <p><b>Total Minted:</b> <span id="totalMinted"></span></p>
+  </div>
 
-      <div id="status" class="text-sm text-slate-400 mb-4">
-        RPC: <span id="rpcUrl" class="mono">https://testnet-rpc.monad.xyz</span> • Chain ID: <span class="mono">10143</span>
-      </div>
-
-      <div id="resultWrap" class="space-y-6">
-        <!-- Summary -->
-        <div id="summary" class="hidden glass rounded-2xl p-4 grid grid-cols-2 gap-4">
-          <div>
-            <div class="text-xs text-slate-400">Tick</div>
-            <div id="outTick" class="text-2xl font-bold"></div>
-            <div class="mt-2 text-xs text-slate-400">Deployer</div>
-            <div id="outDeployer" class="text-sm mono break-all"></div>
-            <div id="policyWarn" class="hidden mt-3 text-xs px-3 py-2 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20">
-              Warning: Contract token settings differ from expected (Max 21,000,000 • Limit 1,000).
-            </div>
-          </div>
-          <div>
-            <div class="text-xs text-slate-400">Max Supply</div>
-            <div id="outMax" class="text-lg font-semibold">—</div>
-
-            <div class="text-xs text-slate-400 mt-3">Limit per Mint</div>
-            <div id="outLimit" class="text-sm">—</div>
-
-            <div class="text-xs text-slate-400 mt-3">Minted</div>
-            <div id="outMinted" class="text-sm">—</div>
-
-            <div class="mt-3">
-              <div class="text-xs text-slate-400">Progress</div>
-              <div class="w-full bg-white/10 rounded-full mt-1 overflow-hidden h-3">
-                <div id="progressBar" class="h-3 bg-gradient-to-r from-cyan-400 to-indigo-500" style="width:0%"></div>
-              </div>
-              <div id="progressText" class="mt-1 text-xs text-slate-400">—</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Extra -->
-        <div id="extra" class="hidden grid lg:grid-cols-2 gap-4">
-          <div class="glass p-4 rounded-2xl">
-            <div class="flex items-center justify-between">
-              <div class="text-sm text-slate-400">Holders Count</div>
-              <div id="holdersCount" class="font-semibold mono">—</div>
-            </div>
-            <div class="text-xs text-slate-400 mt-3">Top Holders (max 200)</div>
-            <ol id="holdersList" class="mt-2 text-sm list-decimal list-inside max-h-56 overflow-auto"></ol>
-          </div>
-
-          <div class="glass p-4 rounded-2xl">
-            <div class="text-sm text-slate-400">Mint Progress</div>
-            <div id="mintProgress" class="mt-2 text-sm mono">—</div>
-
-            <div class="text-sm text-slate-400 mt-4">Total Minted</div>
-            <div id="totalMinted" class="mt-1 font-semibold mono">—</div>
-
-            <div class="mt-4 flex gap-2">
-              <button id="exportJson" class="px-3 py-1 rounded bg-white/10">Export JSON</button>
-              <button id="exportCsv" class="px-3 py-1 rounded bg-white/10">Export CSV</button>
-            </div>
-          </div>
-        </div>
-
-        <div id="log" class="text-xs text-slate-400"></div>
-      </div>
-    </section>
-
-    <!-- Sidebar -->
-    <aside class="glass rounded-2xl p-4">
-      <div class="text-sm text-slate-400 mb-3">Quick Actions</div>
-      <button id="btnMons" class="w-full mb-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-500">Show MONS</button>
-      <button id="btnLast" class="w-full mb-2 px-3 py-2 rounded-xl bg-white/10">Last Inscribes (RPC)</button>
-
-      <div class="mt-4">
-        <div class="text-xs text-slate-400 mb-2">Wallet</div>
-        <div id="walletAddr" class="mono text-sm text-slate-300 break-all">Not connected</div>
-        <div id="walletBal" class="text-xs text-slate-400 mt-1">—</div>
-      </div>
-
-      <div class="mt-6 text-xs text-slate-400">Credit</div>
-      <div class="text-xs mt-1">
-        <a href="https://x.com/ega_2ez4crypto" target="_blank" class="underline">created by @ega_2ez4crypto</a>
-      </div>
-    </aside>
-  </main>
-
-  <footer class="max-w-6xl mx-auto p-6 text-xs text-slate-500">
-    Powered by Monad Testnet • Chain ID: 10143 • RPC: https://testnet-rpc.monad.xyz
-  </footer>
+  <pre id="log"></pre>
 
   <script>
   (function(){
     const RPC_URL = 'https://testnet-rpc.monad.xyz';
-    const CHAIN_ID_DEC = 10143;
-    const CHAIN_ID_HEX = '0x' + CHAIN_ID_DEC.toString(16);
     const CONTRACT_ADDRESS = '0x07169f0F890C3595421512D98DC79b8bce6E5fA6';
 
-    // Policy (expected defaults)
-    const EXPECTED_MAX = 21_000_000;
-    const EXPECTED_LIMIT = 1_000;
-
+    // === ABI kontrak kamu paste full di sini ===
     const ABI = [
-      {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
-      {"anonymous":false,"inputs":[{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"uint256","name":"maxSupply","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"indexed":false,"internalType":"address","name":"deployer","type":"address"}],"name":"Deploy","type":"event"},
-      {"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"}],"name":"deployToken","outputs":[],"stateMutability":"payable","type":"function"},
-      {"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"emergencyWithdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
-      {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"string","name":"operation","type":"string"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"data","type":"string"},{"indexed":false,"internalType":"uint256","name":"inscriptionNumber","type":"uint256"}],"name":"Inscribe","type":"event"},
-      {"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"payable","type":"function"},
-      {"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setDeployFee","outputs":[],"stateMutability":"nonpayable","type":"function"},
-      {"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setMintFee","outputs":[],"stateMutability":"nonpayable","type":"function"},
-      {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[],"stateMutability":"nonpayable","type":"function"},
-      {"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
-      {"stateMutability":"payable","type":"receive"},
-      {"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"string","name":"","type":"string"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-      {"inputs":[],"name":"deployFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-      {"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"tick","type":"string"}],"name":"getBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHolders","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},
-      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHoldersCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getMintProgress","outputs":[{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"percentage","type":"uint256"}],"stateMutability":"view","type":"function"},
-      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTokenInfo","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"uint256","name":"holdersCount","type":"uint256"}],"stateMutability":"view","type":"function"},
-      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTotalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-      {"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"holders","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
-      {"inputs":[],"name":"inscriptionCounter","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-      {"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"address","name":"","type":"address"}],"name":"isHolder","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
-      {"inputs":[],"name":"mintFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-      {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
-      {"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"tokens","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"bool","name":"exists","type":"bool"},{"internalType":"uint256","name":"deployedAt","type":"uint256"}],"stateMutability":"view","type":"function"},
-      {"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"totalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+      {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          { "indexed": true, "internalType": "string", "name": "tick", "type": "string" },
+          { "indexed": false, "internalType": "uint256", "name": "maxSupply", "type": "uint256" },
+          { "indexed": false, "internalType": "uint256", "name": "limitPerMint", "type": "uint256" },
+          { "indexed": false, "internalType": "address", "name": "deployer", "type": "address" }
+        ],
+        "name": "Deploy",
+        "type": "event"
+      },
+      {
+        "inputs": [
+          { "internalType": "string", "name": "tick", "type": "string" }
+        ],
+        "name": "getTokenInfo",
+        "outputs": [
+          { "internalType": "uint256", "name": "maxSupply", "type": "uint256" },
+          { "internalType": "uint256", "name": "limitPerMint", "type": "uint256" },
+          { "internalType": "uint256", "name": "minted", "type": "uint256" },
+          { "internalType": "address", "name": "deployer", "type": "address" },
+          { "internalType": "uint256", "name": "holdersCount", "type": "uint256" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "string", "name": "tick", "type": "string" }
+        ],
+        "name": "getHolders",
+        "outputs": [
+          { "internalType": "address[]", "name": "", "type": "address[]" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      }
     ];
 
     const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-    const contract  = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
 
-    // UI refs
     const rpcEl = document.getElementById('rpcUrl');
     const tickInput = document.getElementById('tickInput');
     const outTick = document.getElementById('outTick');
@@ -185,7 +107,6 @@
     const outLimit = document.getElementById('outLimit');
     const outMinted = document.getElementById('outMinted');
     const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
     const mintProgressEl = document.getElementById('mintProgress');
     const totalMintedEl = document.getElementById('totalMinted');
     const holdersCountEl = document.getElementById('holdersCount');
@@ -193,152 +114,64 @@
     const summary = document.getElementById('summary');
     const extra = document.getElementById('extra');
     const logEl = document.getElementById('log');
-    const policyWarn = document.getElementById('policyWarn');
-    const connectBtn = document.getElementById('connectBtn');
-    const walletAddrEl = document.getElementById('walletAddr');
-    const walletBalEl  = document.getElementById('walletBal');
 
     rpcEl.textContent = RPC_URL;
-
-    function fmt(n){ return Number(n).toLocaleString(); }
-    function setProgress(minted, max){
-      const perc = max > 0 ? Math.min(100, (minted / max) * 100) : 0;
-      progressBar.style.width = perc + '%';
-      progressText.textContent = `${fmt(minted)} / ${fmt(max)} (${perc.toFixed(2)}%)`;
-    }
 
     async function loadTick(tick){
       tick = String(tick || '').trim();
       if (!tick) return alert('Enter a tick name (e.g. MONS)');
       logEl.textContent = 'Loading ' + tick + ' ...';
-      holdersList.innerHTML = '';
 
       try {
         const info = await contract.getTokenInfo(tick);
-        const maxSupply    = parseInt(info.maxSupply.toString(), 10);
-        const limitPerMint = parseInt(info.limitPerMint.toString(), 10);
-        const minted       = parseInt(info.minted.toString(), 10);
-        const deployer     = info.deployer;
-        const holdersCount = parseInt(info.holdersCount.toString(), 10);
+
+        // Ganti decimals sesuai kontrak: 0 (integer) atau 18
+        const decimals = 0;  
+
+        const maxSupply = ethers.utils.formatUnits(info.maxSupply, decimals);
+        const limitPerMint = ethers.utils.formatUnits(info.limitPerMint, decimals);
+        const minted = ethers.utils.formatUnits(info.minted, decimals);
+
+        const maxSupplyNum = Number(maxSupply);
+        const limitPerMintNum = Number(limitPerMint);
+        const mintedNum = Number(minted);
+
+        const deployer = info.deployer;
+        const holdersCount = info.holdersCount.toString();
 
         outTick.textContent = tick;
         outDeployer.textContent = deployer;
-        outMax.textContent = fmt(maxSupply);
-        outLimit.textContent = fmt(limitPerMint);
-        outMinted.textContent = fmt(minted);
-        setProgress(minted, maxSupply);
-        mintProgressEl.textContent = progressText.textContent;
-        totalMintedEl.textContent  = fmt(minted);
-        holdersCountEl.textContent = fmt(holdersCount);
+        outMax.textContent = maxSupplyNum.toLocaleString();
+        outLimit.textContent = limitPerMintNum.toLocaleString();
+        outMinted.textContent = mintedNum.toLocaleString();
 
-        // Policy check: expect 21,000,000 & 1,000
-        const mismatch = (maxSupply !== EXPECTED_MAX) || (limitPerMint !== EXPECTED_LIMIT);
-        policyWarn.classList.toggle('hidden', !mismatch);
+        const perc = (mintedNum / maxSupplyNum) * 100;
+        progressBar.style.width = perc + '%';
+        mintProgressEl.textContent = `Minted ${mintedNum.toLocaleString()} / ${maxSupplyNum.toLocaleString()} (${perc.toFixed(2)}%)`;
+        totalMintedEl.textContent = mintedNum.toLocaleString();
+        holdersCountEl.textContent = holdersCount;
 
         // Holders list
-        try{
-          const holders = await contract.getHolders(tick);
-          holders.slice(0, 200).forEach((addr)=>{
-            const li = document.createElement('li');
-            li.textContent = addr;
-            holdersList.appendChild(li);
-          });
-        }catch(e){ /* ignore holders load errors */ }
+        const holders = await contract.getHolders(tick);
+        holdersList.innerHTML = "";
+        holders.forEach((addr, i)=>{
+          const li = document.createElement("li");
+          li.textContent = `${i+1}. ${addr}`;
+          holdersList.appendChild(li);
+        });
 
         summary.classList.remove('hidden');
         extra.classList.remove('hidden');
         logEl.textContent = 'Loaded successfully.';
       } catch (err) {
         console.error(err);
-        logEl.textContent = 'Failed to load: ' + (err && err.message ? err.message : String(err));
+        logEl.textContent = 'Failed to load: ' + err.message;
       }
     }
 
-    // Exports
-    function download(name, text, mime='application/json'){
-      const blob = new Blob([text], {type: mime});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = name;
-      document.body.appendChild(a); a.click();
-      URL.revokeObjectURL(url); a.remove();
-    }
-    document.getElementById('exportJson').addEventListener('click', ()=>{
-      const data = {
-        tick: outTick.textContent,
-        deployer: outDeployer.textContent,
-        maxSupply: outMax.textContent,
-        limitPerMint: outLimit.textContent,
-        minted: outMinted.textContent,
-        holdersCount: holdersCountEl.textContent,
-        holders: Array.from(holdersList.querySelectorAll('li')).map(li=>li.textContent),
-        chainId: CHAIN_ID_DEC,
-        rpc: RPC_URL,
-        contract: CONTRACT_ADDRESS
-      };
-      download(`indexer_${outTick.textContent||'token'}.json`, JSON.stringify(data,null,2));
-    });
-    document.getElementById('exportCsv').addEventListener('click', ()=>{
-      const rows = [
-        ['tick','deployer','maxSupply','limitPerMint','minted','holdersCount','chainId','rpc','contract'],
-        [outTick.textContent,outDeployer.textContent,outMax.textContent,outLimit.textContent,outMinted.textContent,holdersCountEl.textContent,CHAIN_ID_DEC,RPC_URL,CONTRACT_ADDRESS],
-        [],
-        ['#','holderAddress'],
-        ...Array.from(holdersList.querySelectorAll('li')).map((li,i)=>[String(i+1), li.textContent])
-      ];
-      const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
-      download(`indexer_${outTick.textContent||'token'}.csv`, csv, 'text/csv');
-    });
-
-    // Wallet connect + network check/switch
-    async function connect(){
-      if(!window.ethereum){ alert('No wallet found. Please install a Web3 wallet (e.g., MetaMask).'); return; }
-      const chainId = await ethereum.request({ method: 'eth_chainId' });
-      if (chainId !== CHAIN_ID_HEX){
-        try{
-          await ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: CHAIN_ID_HEX,
-              chainName: 'Monad Testnet',
-              nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
-              rpcUrls: [RPC_URL],
-              blockExplorerUrls: [] // add when available
-            }]
-          });
-        }catch(e){ /* user may reject */ }
-        // try switch (in case already added)
-        try{
-          await ethereum.request({ method:'wallet_switchEthereumChain', params:[{ chainId: CHAIN_ID_HEX }] });
-        }catch(e){ /* ignore */ }
-      }
-      const [addr] = await ethereum.request({ method: 'eth_requestAccounts' });
-      walletAddrEl.textContent = addr;
-
-      // show MON balance (provider may not reflect account signer balance—use wallet RPC)
-      try{
-        const balHex = await ethereum.request({ method:'eth_getBalance', params:[addr, 'latest'] });
-        const bal = ethers.utils.formatEther(ethers.BigNumber.from(balHex));
-        walletBalEl.textContent = `Balance: ${bal} MON`;
-      }catch(e){
-        walletBalEl.textContent = 'Balance: —';
-      }
-    }
-
-    connectBtn.addEventListener('click', connect);
-
-    // Actions
     document.getElementById('searchBtn').addEventListener('click', ()=> loadTick(tickInput.value));
     tickInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') loadTick(tickInput.value); });
     document.getElementById('btnMons').addEventListener('click', ()=> { tickInput.value = 'MONS'; loadTick('MONS'); });
-    document.getElementById('clearBtn').addEventListener('click', ()=>{
-      tickInput.value = '';
-      summary.classList.add('hidden'); extra.classList.add('hidden');
-      holdersList.innerHTML = ''; logEl.textContent = '';
-    });
-    document.getElementById('btnLast').addEventListener('click', ()=>{
-      alert('Last Inscribes via RPC: not implemented in this demo.');
-    });
   })();
   </script>
 </body>
