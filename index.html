@@ -535,7 +535,10 @@
     <script>
         // Contract configuration
         const CONTRACT_ADDRESS = '0x07169f0F890C3595421512D98DC79b8bce6E5fA6';
-        const RPC_URL = 'https://testnet-rpc.monad.xyz';
+        const RPC_URLS = [
+            'https://testnet-rpc.monad.xyz',
+            'https://testnet-rpc.monad.xyz'  // Could add backup RPCs here if available
+        ];
         const CHAIN_ID = 10143;
 
         // Contract ABI
@@ -608,9 +611,42 @@
             }
         ];
 
-        // Initialize provider and contract
-        const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+        // Initialize provider and contract with retry logic
+        let provider;
+        let contract;
+
+        async function initializeProvider() {
+            for (const rpcUrl of RPC_URLS) {
+                try {
+                    console.log('Trying RPC:', rpcUrl);
+                    const testProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
+                    
+                    // Test the connection
+                    await Promise.race([
+                        testProvider.getNetwork(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 5000))
+                    ]);
+                    
+                    provider = testProvider;
+                    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+                    console.log('Successfully connected to RPC:', rpcUrl);
+                    return true;
+                } catch (err) {
+                    console.warn('Failed to connect to RPC:', rpcUrl, err.message);
+                    continue;
+                }
+            }
+            return false;
+        }
+
+        // Initialize on load
+        let providerReady = false;
+        initializeProvider().then(success => {
+            providerReady = success;
+            if (!success) {
+                showError('Failed to connect to Monad network. Please try again later.');
+            }
+        });
 
         // DOM elements
         const tickerInput = document.getElementById('tickerInput');
@@ -667,12 +703,35 @@
                 return;
             }
 
+            if (!providerReady) {
+                showError('Network not ready. Trying to reconnect...');
+                const connected = await initializeProvider();
+                if (!connected) {
+                    showError('Failed to connect to Monad network. Please try again later.');
+                    return;
+                }
+                providerReady = true;
+            }
+
             showLoading();
             searchBtn.disabled = true;
+            console.log('Searching for ticker:', ticker.toUpperCase());
 
             try {
-                // Check if token exists
-                const tokenExists = await contract.tokens(ticker.toUpperCase());
+                // Test provider connection first
+                console.log('Testing provider connection...');
+                const network = await provider.getNetwork();
+                console.log('Connected to network:', network);
+
+                // Check if token exists with timeout
+                console.log('Checking if token exists...');
+                const tokenExistsPromise = contract.tokens(ticker.toUpperCase());
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Request timeout')), 10000)
+                );
+                
+                const tokenExists = await Promise.race([tokenExistsPromise, timeoutPromise]);
+                console.log('Token exists result:', tokenExists);
                 
                 if (!tokenExists.exists) {
                     showError(`Token "${ticker.toUpperCase()}" not found`);
@@ -680,35 +739,67 @@
                     return;
                 }
 
-                // Get token info
-                const [maxSupply, limitPerMint, minted, deployer, holdersCount] = await contract.getTokenInfo(ticker.toUpperCase());
+                // Get token info with timeout
+                console.log('Getting token info...');
+                const tokenInfoPromise = contract.getTokenInfo(ticker.toUpperCase());
+                const [maxSupply, limitPerMint, minted, deployer, holdersCount] = await Promise.race([
+                    tokenInfoPromise, 
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Token info timeout')), 10000))
+                ]);
+                console.log('Token info:', { maxSupply: maxSupply.toString(), limitPerMint: limitPerMint.toString(), minted: minted.toString(), deployer, holdersCount: holdersCount.toString() });
                 
-                // Get mint progress
-                const [mintedProgress, maxSupplyProgress, percentage] = await contract.getMintProgress(ticker.toUpperCase());
+                // Get mint progress with timeout
+                console.log('Getting mint progress...');
+                const mintProgressPromise = contract.getMintProgress(ticker.toUpperCase());
+                const [mintedProgress, maxSupplyProgress, percentage] = await Promise.race([
+                    mintProgressPromise,
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Mint progress timeout')), 10000))
+                ]);
+                console.log('Mint progress:', { mintedProgress: mintedProgress.toString(), maxSupplyProgress: maxSupplyProgress.toString(), percentage: percentage.toString() });
                 
-                // Get holders
+                // Get holders with timeout (this might fail, so we'll make it optional)
                 let holders = [];
                 let holderBalances = [];
                 
                 try {
-                    holders = await contract.getHolders(ticker.toUpperCase());
+                    console.log('Getting holders...');
+                    const holdersPromise = contract.getHolders(ticker.toUpperCase());
+                    holders = await Promise.race([
+                        holdersPromise,
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Holders timeout')), 5000))
+                    ]);
+                    console.log('Holders found:', holders.length);
                     
-                    // Get balances for each holder
-                    holderBalances = await Promise.all(
-                        holders.map(async (holder) => {
-                            const balance = await contract.getBalance(holder, ticker.toUpperCase());
-                            return {
-                                address: holder,
-                                balance: balance.toString()
-                            };
-                        })
-                    );
+                    // Get balances for each holder (limit to first 10 to avoid timeout)
+                    if (holders.length > 0) {
+                        console.log('Getting holder balances...');
+                        const limitedHolders = holders.slice(0, 10);
+                        holderBalances = await Promise.all(
+                            limitedHolders.map(async (holder) => {
+                                try {
+                                    const balance = await contract.getBalance(holder, ticker.toUpperCase());
+                                    return {
+                                        address: holder,
+                                        balance: balance.toString()
+                                    };
+                                } catch (err) {
+                                    console.warn('Failed to get balance for holder:', holder, err);
+                                    return {
+                                        address: holder,
+                                        balance: '0'
+                                    };
+                                }
+                            })
+                        );
 
-                    // Sort by balance (descending)
-                    holderBalances.sort((a, b) => parseInt(b.balance) - parseInt(a.balance));
+                        // Sort by balance (descending)
+                        holderBalances.sort((a, b) => parseInt(b.balance) - parseInt(a.balance));
+                    }
                 } catch (holderError) {
                     console.warn('Could not fetch holders:', holderError);
                 }
+
+                console.log('All data fetched successfully');
 
                 // Display results
                 displayTokenInfo({
@@ -727,7 +818,13 @@
 
             } catch (err) {
                 console.error('Error fetching token data:', err);
-                showError('Error fetching token data. Please try again.');
+                if (err.message.includes('timeout')) {
+                    showError('Request timed out. The Monad network might be slow. Please try again.');
+                } else if (err.message.includes('network')) {
+                    showError('Network connection error. Please check your connection and try again.');
+                } else {
+                    showError(`Error: ${err.message || 'Unknown error occurred'}`);
+                }
             } finally {
                 searchBtn.disabled = false;
             }
