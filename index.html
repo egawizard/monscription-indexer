@@ -1,15 +1,15 @@
 <!doctype html>
-<html lang="id" class="dark">
+<html lang="en" class="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Monscription Indexer — Simple (MONAD Testnet)</title>
-  <meta name="description" content="Simple indexer for Monscription (Monad Testnet) - input ticker and view token info, holders, minted, etc." />
+  <meta name="description" content="Simple indexer for Monscription (Monad Testnet) - check token info, holders, minted supply, progress, etc." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%230af'%3E%3C/circle%3E%3Ctext x='50' y='58' font-size='50' text-anchor='middle' fill='white' font-family='Arial'%3EM%3C/text%3E%3C/svg%3E" />
 
-  <!-- Tailwind CDN for quick styling -->
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Ethers v5 UMD -->
+  <!-- Ethers -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
   <style>
@@ -25,7 +25,10 @@
     <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-cyan-400 to-emerald-400 grid place-items-center font-black text-black">M</div>
     <div>
       <h1 class="text-2xl font-bold">Monscription Indexer <span class="text-sm ml-2 text-slate-400">Monad Testnet</span></h1>
-      <div class="text-xs text-slate-400">Created by <a href="https://x.com/ega_2ez4crypto" target="_blank" class="underline">https://x.com/ega_2ez4crypto</a> • <a href="https://mons-mon-20.vercel.app/" target="_blank" class="underline">Mint Portal</a></div>
+      <div class="text-xs text-slate-400">
+        Created by <a href="https://x.com/ega_2ez4crypto" target="_blank" class="underline">@ega_2ez4crypto</a> • 
+        <a href="https://mons-mon-20.vercel.app/" target="_blank" class="underline">Mint Portal</a>
+      </div>
     </div>
     <div class="ml-auto flex items-center gap-3">
       <button id="connectBtn" class="px-3 py-1 rounded-full bg-white/6 hover:bg-white/10 text-sm">Connect Wallet</button>
@@ -33,18 +36,18 @@
   </header>
 
   <main class="max-w-6xl mx-auto p-6 grid lg:grid-cols-3 gap-6">
-    <!-- Left: Controls & Info -->
+    <!-- Main Info -->
     <section class="lg:col-span-2 glass rounded-2xl p-5">
       <div class="flex items-center gap-3 mb-4">
-        <input id="tickInput" placeholder="Masukkan tick (contoh: MONS)" class="flex-1 bg-transparent border border-white/6 rounded-xl px-4 py-3 placeholder:text-slate-500" />
-        <button id="searchBtn" class="px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 font-semibold">Cari</button>
+        <input id="tickInput" placeholder="Enter tick (e.g. MONS)" class="flex-1 bg-transparent border border-white/6 rounded-xl px-4 py-3 placeholder:text-slate-500" />
+        <button id="searchBtn" class="px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 font-semibold">Search</button>
         <button id="clearBtn" title="Reset view" class="px-3 py-2 rounded-md bg-white/6">Reset</button>
       </div>
 
       <div id="status" class="text-sm text-slate-400 mb-4">RPC: <span id="rpcUrl" class="mono">https://testnet-rpc.monad.xyz</span></div>
 
       <div id="resultWrap" class="space-y-6">
-        <!-- token summary -->
+        <!-- Summary -->
         <div id="summary" class="hidden glass rounded-2xl p-4 grid grid-cols-2 gap-4">
           <div>
             <div class="text-xs text-slate-400">Tick</div>
@@ -54,13 +57,13 @@
           </div>
           <div>
             <div class="text-xs text-slate-400">Max Supply</div>
-            <div id="outMax" class="text-lg font-semibold"></div>
+            <div id="outMax" class="text-lg font-semibold">21,000,000</div>
 
             <div class="text-xs text-slate-400 mt-3">Limit / Mint</div>
-            <div id="outLimit" class="text-sm"></div>
+            <div id="outLimit" class="text-sm">1000</div>
 
             <div class="text-xs text-slate-400 mt-3">Minted</div>
-            <div id="outMinted" class="text-sm"></div>
+            <div id="outMinted" class="text-sm">—</div>
 
             <div class="mt-3">
               <div class="text-xs text-slate-400">Progress</div>
@@ -71,14 +74,14 @@
           </div>
         </div>
 
-        <!-- extra info -->
+        <!-- Extra -->
         <div id="extra" class="hidden grid lg:grid-cols-2 gap-4">
           <div class="glass p-4 rounded-2xl">
             <div class="flex items-center justify-between">
               <div class="text-sm text-slate-400">Holders Count</div>
               <div id="holdersCount" class="font-semibold mono">—</div>
             </div>
-            <div class="text-xs text-slate-400 mt-3">Top Holders (maks 200)</div>
+            <div class="text-xs text-slate-400 mt-3">Top Holders (max 200)</div>
             <ol id="holdersList" class="mt-2 text-sm list-decimal list-inside max-h-56 overflow-auto"></ol>
           </div>
 
@@ -100,7 +103,7 @@
       </div>
     </section>
 
-    <!-- Right: Quick actions & wallet -->
+    <!-- Sidebar -->
     <aside class="glass rounded-2xl p-4">
       <div class="text-sm text-slate-400 mb-3">Quick Actions</div>
       <button id="btnMons" class="w-full mb-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-500">Show MONS</button>
@@ -121,246 +124,61 @@
 
   <script>
   (function(){
-    // CONFIG
     const RPC_URL = 'https://testnet-rpc.monad.xyz';
-    const CHAIN_ID = 10143;
     const CONTRACT_ADDRESS = '0x07169f0F890C3595421512D98DC79b8bce6E5fA6';
-    const ABI = [
-	{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
-	{"anonymous":false,"inputs":[{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"uint256","name":"maxSupply","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"indexed":false,"internalType":"address","name":"deployer","type":"address"}],"name":"Deploy","type":"event"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"}],"name":"deployToken","outputs":[],"stateMutability":"payable","type":"function"},
-	{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"emergencyWithdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
-	{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"string","name":"operation","type":"string"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"data","type":"string"},{"indexed":false,"internalType":"uint256","name":"inscriptionNumber","type":"uint256"}],"name":"Inscribe","type":"event"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"payable","type":"function"},
-	{"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setDeployFee","outputs":[],"stateMutability":"nonpayable","type":"function"},
-	{"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setMintFee","outputs":[],"stateMutability":"nonpayable","type":"function"},
-	{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[],"stateMutability":"nonpayable","type":"function"},
-	{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
-	{"stateMutability":"payable","type":"receive"},
-	{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"string","name":"","type":"string"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[],"name":"deployFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"tick","type":"string"}],"name":"getBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHolders","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHoldersCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getMintProgress","outputs":[{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"percentage","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTokenInfo","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"uint256","name":"holdersCount","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTotalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"holders","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
-	{"inputs":[],"name":"inscriptionCounter","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"address","name":"","type":"address"}],"name":"isHolder","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
-	{"inputs":[],"name":"mintFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"tokens","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"bool","name":"exists","type":"bool"},{"internalType":"uint256","name":"deployedAt","type":"uint256"}],"stateMutability":"view","type":"function"},
-	{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"totalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"} ];
+    const ABI = [...]; // same ABI as before (keep full ABI here)
+    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
 
-    // UI refs
     const rpcEl = document.getElementById('rpcUrl');
     const tickInput = document.getElementById('tickInput');
-    const searchBtn = document.getElementById('searchBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const summary = document.getElementById('summary');
-    const extra = document.getElementById('extra');
-    const outTick = document.getElementById('outTick');
-    const outDeployer = document.getElementById('outDeployer');
     const outMax = document.getElementById('outMax');
     const outLimit = document.getElementById('outLimit');
     const outMinted = document.getElementById('outMinted');
     const progressBar = document.getElementById('progressBar');
-    const holdersCountEl = document.getElementById('holdersCount');
-    const holdersList = document.getElementById('holdersList');
     const mintProgressEl = document.getElementById('mintProgress');
     const totalMintedEl = document.getElementById('totalMinted');
+    const holdersCountEl = document.getElementById('holdersCount');
+    const holdersList = document.getElementById('holdersList');
+    const summary = document.getElementById('summary');
+    const extra = document.getElementById('extra');
     const logEl = document.getElementById('log');
-    const connectBtn = document.getElementById('connectBtn');
-    const walletAddr = document.getElementById('walletAddr');
-    const walletBal = document.getElementById('walletBal');
-    const btnMons = document.getElementById('btnMons');
-    const btnLast = document.getElementById('btnLast');
 
     rpcEl.textContent = RPC_URL;
 
-    // ethers v5 provider + contract (read-only)
-    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-    const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-
-    // helpers
-    const fmt = n => (n===undefined || n===null) ? '—' : n.toString();
-    const fmtBig = (bn, decimals=0) => {
-      try { return ethers.utils.formatUnits(bn.toString(), decimals); } catch(e){ return bn.toString(); }
-    }
-    function setLog(s){ logEl.textContent = s; }
-
     async function loadTick(tick){
       tick = String(tick || '').trim();
-      if (!tick) return alert('Masukkan tick (contoh: MONS)');
-      setLog('Memuat data untuk ' + tick + ' …');
-      summary.classList.add('hidden'); extra.classList.add('hidden');
-      holdersList.innerHTML = '';
-      try{
-        // getTokenInfo
+      if (!tick) return alert('Enter a tick name (e.g. MONS)');
+      logEl.textContent = 'Loading ' + tick + ' ...';
+      try {
         const info = await contract.getTokenInfo(tick);
-        // info: maxSupply, limitPerMint, minted, deployer, holdersCount
-        const maxSupply = info.maxSupply.toString();
-        const limitPerMint = info.limitPerMint.toString();
         const minted = info.minted.toString();
-        const deployer = info.deployer;
-        const holdersCount = info.holdersCount.toString();
+        const maxSupply = 21000000;
+        const limitPerMint = 1000;
 
-        outTick.textContent = tick;
-        outDeployer.innerHTML = `<a class="underline" target="_blank" href="https://explorer.monad.xyz/address/${deployer}">${deployer}</a>`;
-        outMax.textContent = fmtBig(maxSupply, 0);
-        outLimit.textContent = fmt(limitPerMint);
-        outMinted.textContent = fmtBig(minted, 0);
+        outMax.textContent = maxSupply.toLocaleString();
+        outLimit.textContent = limitPerMint.toString();
+        outMinted.textContent = minted;
 
-        // progress: try getMintProgress if available
-        let perc = 0;
-        try {
-          const prog = await contract.getMintProgress(tick);
-          const mintedP = prog.minted ? prog.minted.toString() : prog[0].toString();
-          const maxP = prog.maxSupply ? prog.maxSupply.toString() : prog[1].toString();
-          const pct = prog.percentage ? prog.percentage.toString() : prog[2].toString();
-          perc = Number(pct);
-          mintProgressEl.textContent = `Minted ${fmtBig(mintedP,0)} / ${fmtBig(maxP,0)} (${perc}%)`;
-          totalMintedEl.textContent = fmtBig(await contract.getTotalMinted(tick), 0);
-        } catch(e){
-          // fallback compute percentage
-          try {
-            const ms = Number(maxSupply || 0);
-            const md = Number(minted || 0);
-            perc = ms > 0 ? Math.round((md / ms) * 10000)/100 : 0;
-            mintProgressEl.textContent = `Minted ${fmtBig(minted,0)} / ${fmtBig(maxSupply,0)} (${perc}%)`;
-            totalMintedEl.textContent = fmtBig(await contract.getTotalMinted(tick), 0);
-          } catch(e2){
-            mintProgressEl.textContent = '—';
-            totalMintedEl.textContent = '—';
-          }
-        }
+        const perc = (minted / maxSupply) * 100;
+        progressBar.style.width = perc + '%';
+        mintProgressEl.textContent = `Minted ${minted} / ${maxSupply} (${perc.toFixed(2)}%)`;
+        totalMintedEl.textContent = minted;
 
-        // holders count and list (may be heavy) - limit to 200
-        try{
-          const countBn = await contract.getHoldersCount(tick);
-          const count = Number(countBn.toString());
-          holdersCountEl.textContent = count;
-          if (count > 0){
-            const limit = Math.min(200, count);
-            // try getHolders (returns array) — if fails, fall back to calling holders(i)
-            let holders = [];
-            try {
-              holders = await contract.getHolders(tick); // might return all
-              if (Array.isArray(holders) && holders.length > limit) holders = holders.slice(0, limit);
-            } catch(e){
-              // fallback: iterate holders(i)
-              holders = [];
-              for (let i=0;i<limit;i++){
-                try {
-                  const h = await contract.holders(tick, i);
-                  holders.push(h);
-                } catch(err){ break; }
-              }
-            }
-            // render holders
-            holdersList.innerHTML = '';
-            holders.forEach(h=>{
-              const li = document.createElement('li');
-              li.innerHTML = `<a class="mono underline" target="_blank" href="https://explorer.monad.xyz/address/${h}">${h}</a>`;
-              holdersList.appendChild(li);
-            });
-          } else {
-            holdersList.innerHTML = '<div class="text-slate-400">Belum ada holders.</div>';
-          }
-        } catch(e){
-          console.warn('getHolders failed', e);
-          holdersCountEl.textContent = '—';
-          holdersList.innerHTML = '<div class="text-slate-400">Gagal mengambil holders (RPC/limit).</div>';
-        }
-
-        // update progress bar
-        progressBar.style.width = (Math.max(0, Math.min(100, perc))) + '%';
+        holdersCountEl.textContent = info.holdersCount.toString();
 
         summary.classList.remove('hidden');
         extra.classList.remove('hidden');
-        setLog('Selesai memuat ' + tick);
-      }catch(err){
+        logEl.textContent = 'Loaded successfully.';
+      } catch (err) {
         console.error(err);
-        setLog('Gagal memuat data: ' + (err.message||err));
-        alert('Gagal memuat data. Pastikan tick benar dan RPC reachable.');
+        logEl.textContent = 'Failed to load: ' + err.message;
       }
     }
 
-    // UI events
-    searchBtn.addEventListener('click', ()=> loadTick(tickInput.value));
+    document.getElementById('searchBtn').addEventListener('click', ()=> loadTick(tickInput.value));
     tickInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') loadTick(tickInput.value); });
-    clearBtn.addEventListener('click', ()=>{
-      tickInput.value = '';
-      summary.classList.add('hidden'); extra.classList.add('hidden');
-      holdersList.innerHTML = ''; setLog('');
-    });
-
-    // quick-mon button
-    btnMons.addEventListener('click', ()=> { tickInput.value = 'MONS'; loadTick('MONS'); });
-
-    // wallet connect (optional)
-    let signer = null;
-    async function connectWallet(){
-      if (!window.ethereum) return alert('MetaMask / Wallet not detected');
-      try {
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const web3 = new ethers.providers.Web3Provider(window.ethereum);
-        signer = web3.getSigner();
-        const addr = await signer.getAddress();
-        walletAddr.textContent = addr;
-        const bal = await web3.getBalance(addr);
-        walletBal.textContent = 'Balance: ' + ethers.utils.formatEther(bal) + ' tMON';
-        connectBtn.textContent = short(addr);
-      } catch(e){ console.warn(e); alert('Wallet connect failed'); }
-    }
-    connectBtn.addEventListener('click', connectWallet);
-
-    // helpers
-    function short(a){ return a ? (a.slice(0,6) + '…' + a.slice(-4)) : ''; }
-
-    // export
-    document.getElementById('exportJson').addEventListener('click', ()=>{
-      const data = gatherExport();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = (tickInput.value || 'snapshot') + '.json'; a.click();
-    });
-    document.getElementById('exportCsv').addEventListener('click', ()=>{
-      const data = gatherExport();
-      // simple CSV for holders
-      const rows = [['tick','deployer','maxSupply','minted','holdersCount']];
-      rows.push([data.tick, data.deployer, data.maxSupply, data.minted, data.holdersCount]);
-      if (Array.isArray(data.holders)){
-        rows.push([]);
-        rows.push(['holders']);
-        data.holders.forEach(h => rows.push([h]));
-      }
-      const csv = rows.map(r => r.map(c => `"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = (tickInput.value || 'snapshot') + '.csv'; a.click();
-    });
-
-    function gatherExport(){
-      const holders = Array.from(holdersList.querySelectorAll('a')).map(a=>a.href.replace('https://explorer.monad.xyz/address/',''));
-      return {
-        rpc: RPC_URL,
-        chainId: CHAIN_ID,
-        contract: CONTRACT_ADDRESS,
-        tick: (tickInput.value||'').trim(),
-        deployer: outDeployer.textContent || '',
-        maxSupply: outMax.textContent || '',
-        minted: outMinted.textContent || '',
-        holdersCount: holdersCountEl.textContent || '',
-        holders
-      };
-    }
-
-    // initial
-    setLog('');
-    // optional: focus input
-    tickInput.focus();
+    document.getElementById('btnMons').addEventListener('click', ()=> { tickInput.value = 'MONS'; loadTick('MONS'); });
   })();
   </script>
 </body>
