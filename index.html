@@ -291,6 +291,16 @@
             text-decoration: none;
         }
         
+        .network-info {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
         @media (max-width: 768px) {
             h1 {
                 font-size: 2.5rem;
@@ -324,6 +334,9 @@
         <header>
             <h1>MONSCRIPTION INDEXER</h1>
             <p class="subtitle">Explore token information on the Monad blockchain</p>
+            <div class="network-info">
+                <i class="fas fa-plug"></i> Connected to Monad Testnet (Chain ID: 10143)
+            </div>
         </header>
         
         <section class="search-section">
@@ -977,6 +990,13 @@
                 hideError();
                 
                 try {
+                    // Check if token exists first
+                    const tokenExists = await contract.tokens(ticker);
+                    
+                    if (!tokenExists.exists) {
+                        throw new Error(`Token "${ticker}" does not exist on the blockchain`);
+                    }
+                    
                     const tokenInfo = await contract.getTokenInfo(ticker);
                     
                     // Update UI with token data
@@ -985,7 +1005,7 @@
                     holdersCount.textContent = formatNumber(tokenInfo.holdersCount);
                     minted.textContent = formatNumber(tokenInfo.minted);
                     limitPerMint.textContent = formatNumber(tokenInfo.limitPerMint);
-                    deployer.textContent = shortenAddress(tokenInfo.deployer);
+                    deployer.textContent = tokenInfo.deployer;
                     
                     // Calculate and display mint progress
                     const progress = (tokenInfo.minted / tokenInfo.maxSupply) * 100;
@@ -995,7 +1015,7 @@
                     // Show result section
                     showResult();
                 } catch (err) {
-                    showError('Error fetching token data. Please check the ticker and try again.');
+                    showError(`Error: ${err.message}`);
                     console.error(err);
                 } finally {
                     hideLoading();
@@ -1033,8 +1053,10 @@
                 resultSection.style.display = 'block';
             }
             
-            // Auto-load MONS data on page load
-            fetchTokenData('MONS');
+            // Test with MONS token on page load
+            setTimeout(() => {
+                fetchTokenData('MONS');
+            }, 1000);
         });
     </script>
 </body>
