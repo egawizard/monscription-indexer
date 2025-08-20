@@ -658,6 +658,20 @@
         const errorMessage = document.getElementById('errorMessage');
 
         // Utility functions
+        function formatTokenAmount(amount, decimals = 18) {
+            // Convert from wei to token amount
+            const tokenAmount = parseFloat(ethers.utils.formatUnits(amount, decimals));
+            
+            if (tokenAmount >= 1e9) {
+                return (tokenAmount / 1e9).toFixed(2) + 'B';
+            } else if (tokenAmount >= 1e6) {
+                return (tokenAmount / 1e6).toFixed(2) + 'M';
+            } else if (tokenAmount >= 1e3) {
+                return (tokenAmount / 1e3).toFixed(2) + 'K';
+            }
+            return tokenAmount.toLocaleString(undefined, { maximumFractionDigits: 2 });
+        }
+
         function formatNumber(num) {
             if (num >= 1e9) {
                 return (num / 1e9).toFixed(2) + 'B';
@@ -831,7 +845,7 @@
         }
 
         function displayTokenInfo(tokenData) {
-            const mintProgress = (parseInt(tokenData.minted) / parseInt(tokenData.maxSupply)) * 100;
+            const mintProgress = (parseFloat(ethers.utils.formatUnits(tokenData.minted, 18)) / parseFloat(ethers.utils.formatUnits(tokenData.maxSupply, 18))) * 100;
             const isComplete = mintProgress >= 100;
 
             tokenCard.innerHTML = `
@@ -851,15 +865,15 @@
 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-value">${formatNumber(tokenData.maxSupply)}</div>
+                        <div class="stat-value">${formatTokenAmount(tokenData.maxSupply)}</div>
                         <div class="stat-label">Max Supply</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value">${formatNumber(tokenData.minted)}</div>
+                        <div class="stat-value">${formatTokenAmount(tokenData.minted)}</div>
                         <div class="stat-label">Total Minted</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value">${formatNumber(tokenData.limitPerMint)}</div>
+                        <div class="stat-value">${formatTokenAmount(tokenData.limitPerMint)}</div>
                         <div class="stat-label">Limit Per Mint</div>
                     </div>
                     <div class="stat-card">
@@ -887,7 +901,7 @@
                         ${tokenData.holders.slice(0, 10).map(holder => `
                             <div class="holder-item">
                                 <span class="holder-address">${shortenAddress(holder.address)}</span>
-                                <span class="holder-balance">${formatNumber(holder.balance)}</span>
+                                <span class="holder-balance">${formatTokenAmount(holder.balance)}</span>
                             </div>
                         `).join('')}
                     </div>
