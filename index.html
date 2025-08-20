@@ -1,178 +1,95 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Monascription Indexer</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; background: #0d1117; color: #fff; margin:0; padding:20px; }
-    .card { background:#161b22; padding:20px; border-radius:12px; margin-bottom:20px; box-shadow:0 0 10px rgba(0,0,0,0.5);}
-    .progress { background:#333; border-radius:8px; overflow:hidden; height:20px; margin-top:5px; }
-    .progress-bar { background:#1f6feb; height:100%; width:0%; transition:width 0.5s; }
-    .hidden { display:none; }
-    button { padding:8px 16px; border:none; border-radius:8px; background:#238636; color:#fff; cursor:pointer; margin-right:5px; }
-    input { padding:8px; border-radius:8px; border:1px solid #333; background:#0d1117; color:#fff; }
-    ul { max-height:150px; overflow:auto; background:#0d1117; padding:10px; border-radius:8px; }
-  </style>
-</head>
-<body>
-  <h2>Monascription Indexer</h2>
-  <p>RPC: <span id="rpcUrl"></span></p>
+import { useState } from "react";
+import { ethers } from "ethers";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-  <div>
-    <input type="text" id="tickInput" placeholder="Enter tick (e.g. MONS)">
-    <button id="searchBtn">Search</button>
-    <button id="btnMons">Show MONS</button>
-  </div>
+const CONTRACT_ADDRESS = "0x07169f0F890C3595421512D98DC79b8bce6E5fA6";
+const RPC_URL = "https://testnet-rpc.monad.xyz";
+const ABI = [
+  // hanya ambil function penting dari ABI untuk ringkas
+  "function getTokenInfo(string tick) view returns(uint256 maxSupply, uint256 limitPerMint, uint256 minted, address deployer, uint256 holdersCount)",
+  "function getMintProgress(string tick) view returns(uint256 minted, uint256 maxSupply, uint256 percentage)",
+  "function getHolders(string tick) view returns(address[])"
+];
 
-  <div id="summary" class="card hidden">
-    <h3><span id="outTick"></span></h3>
-    <p><b>Deployer:</b> <span id="outDeployer"></span></p>
-    <p><b>Max Supply:</b> <span id="outMax"></span></p>
-    <p><b>Limit per Mint:</b> <span id="outLimit"></span></p>
-    <p><b>Minted:</b> <span id="outMinted"></span></p>
-    <div class="progress">
-      <div class="progress-bar" id="progressBar"></div>
-    </div>
-    <p id="mintProgress"></p>
-  </div>
+export default function Indexer() {
+  const [tick, setTick] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [info, setInfo] = useState(null);
+  const [error, setError] = useState(null);
 
-  <div id="extra" class="card hidden">
-    <p><b>Holders Count:</b> <span id="holdersCount"></span></p>
-    <ul id="holdersList"></ul>
-    <p><b>Total Minted:</b> <span id="totalMinted"></span></p>
-  </div>
+  async function fetchData() {
+    try {
+      setLoading(true);
+      setError(null);
 
-  <pre id="log"></pre>
+      const provider = new ethers.JsonRpcProvider(RPC_URL);
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
 
-  <script>
-  (function(){
-    const RPC_URL = 'https://testnet-rpc.monad.xyz';
-    const CONTRACT_ADDRESS = '0x07169f0F890C3595421512D98DC79b8bce6E5fA6';
+      const [tokenInfo, mintProgress, holders] = await Promise.all([
+        contract.getTokenInfo(tick),
+        contract.getMintProgress(tick),
+        contract.getHolders(tick)
+      ]);
 
-    // === ABI kontrak kamu paste full di sini ===
-    const ABI = [
-      {
-        "inputs": [],
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-      },
-      {
-        "anonymous": false,
-        "inputs": [
-          { "indexed": true, "internalType": "string", "name": "tick", "type": "string" },
-          { "indexed": false, "internalType": "uint256", "name": "maxSupply", "type": "uint256" },
-          { "indexed": false, "internalType": "uint256", "name": "limitPerMint", "type": "uint256" },
-          { "indexed": false, "internalType": "address", "name": "deployer", "type": "address" }
-        ],
-        "name": "Deploy",
-        "type": "event"
-      },
-      {
-        "inputs": [
-          { "internalType": "string", "name": "tick", "type": "string" }
-        ],
-        "name": "getTokenInfo",
-        "outputs": [
-          { "internalType": "uint256", "name": "maxSupply", "type": "uint256" },
-          { "internalType": "uint256", "name": "limitPerMint", "type": "uint256" },
-          { "internalType": "uint256", "name": "minted", "type": "uint256" },
-          { "internalType": "address", "name": "deployer", "type": "address" },
-          { "internalType": "uint256", "name": "holdersCount", "type": "uint256" }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          { "internalType": "string", "name": "tick", "type": "string" }
-        ],
-        "name": "getHolders",
-        "outputs": [
-          { "internalType": "address[]", "name": "", "type": "address[]" }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      }
-    ];
-
-    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-    const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-
-    const rpcEl = document.getElementById('rpcUrl');
-    const tickInput = document.getElementById('tickInput');
-    const outTick = document.getElementById('outTick');
-    const outDeployer = document.getElementById('outDeployer');
-    const outMax = document.getElementById('outMax');
-    const outLimit = document.getElementById('outLimit');
-    const outMinted = document.getElementById('outMinted');
-    const progressBar = document.getElementById('progressBar');
-    const mintProgressEl = document.getElementById('mintProgress');
-    const totalMintedEl = document.getElementById('totalMinted');
-    const holdersCountEl = document.getElementById('holdersCount');
-    const holdersList = document.getElementById('holdersList');
-    const summary = document.getElementById('summary');
-    const extra = document.getElementById('extra');
-    const logEl = document.getElementById('log');
-
-    rpcEl.textContent = RPC_URL;
-
-    async function loadTick(tick){
-      tick = String(tick || '').trim();
-      if (!tick) return alert('Enter a tick name (e.g. MONS)');
-      logEl.textContent = 'Loading ' + tick + ' ...';
-
-      try {
-        const info = await contract.getTokenInfo(tick);
-
-        // Ganti decimals sesuai kontrak: 0 (integer) atau 18
-        const decimals = 0;  
-
-        const maxSupply = ethers.utils.formatUnits(info.maxSupply, decimals);
-        const limitPerMint = ethers.utils.formatUnits(info.limitPerMint, decimals);
-        const minted = ethers.utils.formatUnits(info.minted, decimals);
-
-        const maxSupplyNum = Number(maxSupply);
-        const limitPerMintNum = Number(limitPerMint);
-        const mintedNum = Number(minted);
-
-        const deployer = info.deployer;
-        const holdersCount = info.holdersCount.toString();
-
-        outTick.textContent = tick;
-        outDeployer.textContent = deployer;
-        outMax.textContent = maxSupplyNum.toLocaleString();
-        outLimit.textContent = limitPerMintNum.toLocaleString();
-        outMinted.textContent = mintedNum.toLocaleString();
-
-        const perc = (mintedNum / maxSupplyNum) * 100;
-        progressBar.style.width = perc + '%';
-        mintProgressEl.textContent = `Minted ${mintedNum.toLocaleString()} / ${maxSupplyNum.toLocaleString()} (${perc.toFixed(2)}%)`;
-        totalMintedEl.textContent = mintedNum.toLocaleString();
-        holdersCountEl.textContent = holdersCount;
-
-        // Holders list
-        const holders = await contract.getHolders(tick);
-        holdersList.innerHTML = "";
-        holders.forEach((addr, i)=>{
-          const li = document.createElement("li");
-          li.textContent = `${i+1}. ${addr}`;
-          holdersList.appendChild(li);
-        });
-
-        summary.classList.remove('hidden');
-        extra.classList.remove('hidden');
-        logEl.textContent = 'Loaded successfully.';
-      } catch (err) {
-        console.error(err);
-        logEl.textContent = 'Failed to load: ' + err.message;
-      }
+      setInfo({
+        tick,
+        maxSupply: tokenInfo.maxSupply.toString(),
+        limitPerMint: tokenInfo.limitPerMint.toString(),
+        minted: tokenInfo.minted.toString(),
+        deployer: tokenInfo.deployer,
+        holdersCount: tokenInfo.holdersCount.toString(),
+        holders,
+        progress: mintProgress.percentage.toString()
+      });
+    } catch (err) {
+      console.error(err);
+      setError("Token not found or RPC error");
+    } finally {
+      setLoading(false);
     }
+  }
 
-    document.getElementById('searchBtn').addEventListener('click', ()=> loadTick(tickInput.value));
-    tickInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') loadTick(tickInput.value); });
-    document.getElementById('btnMons').addEventListener('click', ()=> { tickInput.value = 'MONS'; loadTick('MONS'); });
-  })();
-  </script>
-</body>
-</html>
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex flex-col items-center p-8">
+      <h1 className="text-4xl font-bold mb-4">Monscription Indexer</h1>
+      <p className="mb-6 text-gray-400">Simple indexer for Monscription (Monad Testnet)</p>
+
+      <div className="flex gap-2 mb-6">
+        <Input
+          placeholder="Enter ticker e.g. MONS"
+          value={tick}
+          onChange={(e) => setTick(e.target.value)}
+          className="w-64"
+        />
+        <Button onClick={fetchData} disabled={loading}>
+          {loading ? "Loading..." : "Search"}
+        </Button>
+      </div>
+
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+
+      {info && (
+        <Card className="bg-gray-800 w-full max-w-2xl">
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-semibold mb-4">Token: {info.tick}</h2>
+            <ul className="space-y-2">
+              <li><b>Max Supply:</b> {info.maxSupply}</li>
+              <li><b>Minted:</b> {info.minted} ({info.progress}%)</li>
+              <li><b>Limit per Mint:</b> {info.limitPerMint}</li>
+              <li><b>Deployer:</b> {info.deployer}</li>
+              <li><b>Holders Count:</b> {info.holdersCount}</li>
+              <li className="truncate"><b>Sample Holders:</b> {info.holders.slice(0,5).join(", ")}</li>
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      <footer className="mt-12 text-gray-500 text-sm">
+        Created by <a href="https://x.com/ega_2ez4crypto" target="_blank" className="underline">@ega_2ez4crypto</a> ·
+        Mint here: <a href="https://mons-mon-20.vercel.app/" target="_blank" className="underline">mons-mon-20.vercel.app</a>
+      </footer>
+    </div>
+  );
+}
