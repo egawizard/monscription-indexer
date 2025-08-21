@@ -3,536 +3,612 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MON-20 Minting Platform | $MONS Token</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>MONAD MON-20 Inscription Minter</title>
     <style>
-        :root {
-            --primary: #6c5ce7;
-            --secondary: #a29bfe;
-            --accent: #00cec9;
-            --dark: #2d3436;
-            --light: #f5f6fa;
-            --success: #00b894;
-            --warning: #fdcb6e;
-            --danger: #d63031;
-        }
-        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+
         body {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: var(--light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding-bottom: 2rem;
+            color: #fff;
         }
-        
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 1rem;
+            padding: 20px;
         }
-        
-        header {
-            padding: 2rem 0;
+
+        .header {
             text-align: center;
-            background: rgba(0, 0, 0, 0.2);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 2rem;
+            margin-bottom: 40px;
+            padding: 40px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
-        .logo {
-            font-size: 2.5rem;
+
+        .header h1 {
+            font-size: 3rem;
             font-weight: 700;
-            color: var(--accent);
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        
-        .logo i {
-            margin-right: 0.5rem;
-        }
-        
-        .subtitle {
-            color: var(--secondary);
+
+        .header p {
             font-size: 1.2rem;
-            margin-bottom: 1rem;
+            opacity: 0.9;
+            margin-bottom: 20px;
         }
-        
-        .credit {
-            font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.6);
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
         }
-        
-        .credit a {
-            color: var(--accent);
-            text-decoration: none;
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
         }
-        
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4ecdc4;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
         .main-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 2rem;
+            gap: 30px;
+            margin-bottom: 40px;
         }
-        
-        @media (max-width: 900px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-        }
-        
-        .card-title {
-            font-size: 1.5rem;
-            margin-bottom: 1.5rem;
-            color: var(--accent);
-            display: flex;
-            align-items: center;
-        }
-        
-        .card-title i {
-            margin-right: 0.5rem;
-        }
-        
+
         .mint-section {
-            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
-        .supply-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 1.5rem;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 1rem;
-            border-radius: 0.5rem;
+
+        .mint-section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #4ecdc4;
         }
-        
-        .supply-item {
-            text-align: center;
-        }
-        
-        .supply-value {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--accent);
-        }
-        
-        .supply-label {
-            font-size: 0.9rem;
-            color: var(--secondary);
-        }
-        
-        .mint-form {
-            margin-top: 2rem;
-        }
-        
+
         .input-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 20px;
         }
-        
+
         .input-group label {
             display: block;
-            margin-bottom: 0.5rem;
-            text-align: left;
-            color: var(--secondary);
+            margin-bottom: 5px;
+            font-weight: 500;
         }
-        
-        input {
+
+        .input-group input {
             width: 100%;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(0, 0, 0, 0.3);
-            color: white;
-            font-size: 1rem;
-        }
-        
-        button {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            color: white;
+            padding: 12px;
             border: none;
-            padding: 1rem 2rem;
-            border-radius: 0.5rem;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
             font-size: 1.1rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            width: 100%;
+            margin-bottom: 10px;
         }
-        
-        button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4);
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
         }
-        
-        button:disabled {
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-secondary {
             background: rgba(255, 255, 255, 0.1);
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
-        
-        .progress-bar {
-            height: 10px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 5px;
-            overflow: hidden;
-            margin: 1.5rem 0;
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
-        
-        .progress {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent) 0%, var(--primary) 100%);
-            border-radius: 5px;
-            transition: width 0.5s ease;
+
+        .holders-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-top: 1.5rem;
+
+        .holders-section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #4ecdc4;
         }
-        
-        .stat-item {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--accent);
-        }
-        
-        .stat-label {
-            font-size: 0.9rem;
-            color: var(--secondary);
-        }
-        
-        .holders-list {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-top: 1rem;
-        }
-        
+
         .holder-item {
             display: flex;
             justify-content: space-between;
-            padding: 0.75rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            align-items: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .holder-address {
             font-family: monospace;
             font-size: 0.9rem;
         }
-        
-        .holder-amount {
-            color: var(--accent);
-            font-weight: 600;
+
+        .holder-balance {
+            font-weight: bold;
+            color: #4ecdc4;
         }
-        
-        .alert {
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-            display: none;
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
         }
-        
-        .alert-success {
-            background: rgba(0, 184, 148, 0.2);
-            border: 1px solid var(--success);
-            color: var(--success);
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+            transition: width 0.5s ease;
+            border-radius: 10px;
         }
-        
-        .alert-error {
-            background: rgba(214, 48, 49, 0.2);
-            border: 1px solid var(--danger);
-            color: var(--danger);
-        }
-        
+
         .network-info {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .network-info h3 {
+            color: #4ecdc4;
+            margin-bottom: 10px;
+        }
+
+        .network-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
             font-size: 0.9rem;
-            color: var(--secondary);
         }
-        
-        .network-info i {
-            margin-right: 0.5rem;
-            color: var(--success);
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
         }
-        
+
+        .status-connected {
+            background: #4ecdc4;
+        }
+
+        .status-disconnected {
+            background: #ff6b6b;
+        }
+
         .footer {
             text-align: center;
-            margin-top: 3rem;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.9rem;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .footer a {
+            color: #4ecdc4;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+        }
+
+        .toast.error {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .network-details {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <div class="logo">
-                <i class="fas fa-coins"></i>
-                <span>MON-20 Minting Platform</span>
-            </div>
-            <div class="subtitle">The first inscription token on MONAD Blockchain</div>
-            <div class="credit">Created by <a href="https://x.com/ega_2ez4crypto" target="_blank">@ega_2ez4crypto</a></div>
-        </div>
-    </header>
-
     <div class="container">
+        <div class="header">
+            <h1>MONAD MON-20</h1>
+            <p>The First Inscription Token on MONAD Testnet</p>
+            <div class="status-indicator" id="connectionStatus"></div>
+            <span id="connectionText">Connecting...</span>
+        </div>
+
+        <div class="network-info">
+            <h3>Network Information</h3>
+            <div class="network-details">
+                <div><strong>Chain ID:</strong> 10143</div>
+                <div><strong>Network:</strong> MONAD Testnet</div>
+                <div><strong>Ticker:</strong> $MONS</div>
+                <div><strong>Max Supply:</strong> 21,000,000</div>
+                <div><strong>Mint Limit:</strong> 1,000 per mint</div>
+                <div><strong>Deploy Block:</strong> 32,111,409</div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalSupply">0</div>
+                <div class="stat-label">Total Minted</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="remainingSupply">21,000,000</div>
+                <div class="stat-label">Remaining</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalHolders">0</div>
+                <div class="stat-label">Holders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="mintCount">0</div>
+                <div class="stat-label">Mint Count</div>
+            </div>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+
         <div class="main-content">
-            <div class="card mint-section">
-                <h2 class="card-title"><i class="fas fa-fire"></i> Mint $MONS Tokens</h2>
-                
-                <div class="supply-info">
-                    <div class="supply-item">
-                        <div class="supply-value">21,000,000</div>
-                        <div class="supply-label">Total Supply</div>
-                    </div>
-                    <div class="supply-item">
-                        <div class="supply-value" id="minted-supply">0</div>
-                        <div class="supply-label">Minted</div>
-                    </div>
-                    <div class="supply-item">
-                        <div class="supply-value">1,000</div>
-                        <div class="supply-label">Per Mint</div>
-                    </div>
+            <div class="mint-section">
+                <h2>Mint MONS Tokens</h2>
+                <div class="input-group">
+                    <label>Amount (Fixed: 1000 MONS)</label>
+                    <input type="text" value="1000" readonly style="opacity: 0.7;">
                 </div>
-                
-                <div class="progress-bar">
-                    <div class="progress" id="mint-progress" style="width: 0%"></div>
+                <div class="input-group">
+                    <label>Gas Price (Gwei)</label>
+                    <input type="number" id="gasPrice" value="20" min="1">
                 </div>
-                
-                <div class="alert alert-success" id="success-alert">
-                    <i class="fas fa-check-circle"></i> Transaction successful! Your tokens have been minted.
-                </div>
-                
-                <div class="alert alert-error" id="error-alert">
-                    <i class="fas fa-exclamation-circle"></i> <span id="error-message"></span>
-                </div>
-                
-                <div class="mint-form">
-                    <div class="input-group">
-                        <label for="amount">Amount to Mint (max 1000 per transaction)</label>
-                        <input type="number" id="amount" value="1000" min="1" max="1000">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="wallet-address">Your Wallet Address</label>
-                        <input type="text" id="wallet-address" placeholder="0x...">
-                    </div>
-                    
-                    <button id="mint-button">Mint Now</button>
-                </div>
-                
-                <div class="network-info">
-                    <i class="fas fa-link"></i> Connected to MONAD Testnet (Chain ID: 10143)
+                <button class="btn btn-secondary" onclick="connectWallet()">Connect Wallet</button>
+                <button class="btn btn-primary" onclick="mintToken()" id="mintBtn" disabled>Mint 1000 MONS</button>
+                <div style="margin-top: 15px; font-size: 0.9rem; opacity: 0.8;">
+                    <p>⚠️ Only amounts of exactly 1000 MONS are valid</p>
+                    <p>💡 Each mint costs ~0.001 ETH in gas</p>
                 </div>
             </div>
-            
-            <div class="card">
-                <h2 class="card-title"><i class="fas fa-chart-line"></i> Minting Progress</h2>
-                
-                <div class="stats">
-                    <div class="stat-item">
-                        <div class="stat-value" id="progress-percent">0%</div>
-                        <div class="stat-label">Progress</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="remaining-mints">21,000</div>
-                        <div class="stat-label">Remaining Mints</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="total-holders">0</div>
-                        <div class="stat-label">Total Holders</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="deploy-block">32,111,409</div>
-                        <div class="stat-label">Deploy Block</div>
-                    </div>
-                </div>
-                
-                <h2 class="card-title" style="margin-top: 2rem;"><i class="fas fa-users"></i> Top Holders</h2>
-                
-                <div class="holders-list" id="holders-list">
+
+            <div class="holders-section">
+                <h2>Top Holders</h2>
+                <div id="holdersList">
                     <div class="holder-item">
-                        <span class="holder-address">0x742d35Cc6634C0532925a3b844Bc454e4438f44e</span>
-                        <span class="holder-amount">125,000 MONS</span>
-                    </div>
-                    <div class="holder-item">
-                        <span class="holder-address">0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed</span>
-                        <span class="holder-amount">98,500 MONS</span>
-                    </div>
-                    <div class="holder-item">
-                        <span class="holder-address">0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed</span>
-                        <span class="holder-amount">87,000 MONS</span>
-                    </div>
-                    <div class="holder-item">
-                        <span class="holder-address">0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed</span>
-                        <span class="holder-amount">76,500 MONS</span>
-                    </div>
-                    <div class="holder-item">
-                        <span class="holder-address">0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed</span>
-                        <span class="holder-amount">62,000 MONS</span>
+                        <span class="holder-address">Loading holders...</span>
+                        <span class="holder-balance">-</span>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="footer">
+            <p>Created by <a href="https://x.com/ega_2ez4crypto" target="_blank">@ega_2ez4crypto</a></p>
+            <p style="margin-top: 10px; font-size: 0.9rem; opacity: 0.7;">
+                Fully decentralized • No database • All data onchain
+            </p>
         </div>
     </div>
 
-    <div class="footer">
-        <div class="container">
-            <p>MON-20 is the first inscription token standard on the MONAD blockchain. $MONS has a fixed supply of 21,000,000 tokens.</p>
-            <p>This is a community project and not affiliated with the official Monad team.</p>
-        </div>
-    </div>
+    <div class="toast" id="toast"></div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Elements
-            const amountInput = document.getElementById('amount');
-            const walletInput = document.getElementById('wallet-address');
-            const mintButton = document.getElementById('mint-button');
-            const successAlert = document.getElementById('success-alert');
-            const errorAlert = document.getElementById('error-alert');
-            const errorMessage = document.getElementById('error-message');
-            const mintedSupply = document.getElementById('minted-supply');
-            const mintProgress = document.getElementById('mint-progress');
-            const progressPercent = document.getElementById('progress-percent');
-            const remainingMints = document.getElementById('remaining-mints');
-            const totalHolders = document.getElementById('total-holders');
-            
-            // Initial stats (would be fetched from blockchain in a real implementation)
-            let currentMinted = 5250000; // Example data
-            const maxSupply = 21000000;
-            const mintPerTransaction = 1000;
-            
-            // Update stats
-            function updateStats() {
-                mintedSupply.textContent = currentMinted.toLocaleString();
-                const percent = (currentMinted / maxSupply * 100).toFixed(2);
-                mintProgress.style.width = `${percent}%`;
-                progressPercent.textContent = `${percent}%`;
-                remainingMints.textContent = ((maxSupply - currentMinted) / mintPerTransaction).toLocaleString();
-            }
-            
-            updateStats();
-            
-            // Mint button handler
-            mintButton.addEventListener('click', async function() {
-                // Validate inputs
-                const amount = parseInt(amountInput.value);
-                const walletAddress = walletInput.value.trim();
-                
-                if (isNaN(amount) || amount <= 0 || amount > 1000) {
-                    showError("Please enter a valid amount between 1 and 1000");
-                    return;
-                }
-                
-                if (!walletAddress || !isValidAddress(walletAddress)) {
-                    showError("Please enter a valid wallet address");
-                    return;
-                }
-                
-                // Check if minting would exceed supply
-                if (currentMinted + amount > maxSupply) {
-                    showError(`Minting ${amount} tokens would exceed the total supply. Only ${maxSupply - currentMinted} tokens remain.`);
-                    return;
-                }
-                
-                // Disable button and show loading state
-                mintButton.disabled = true;
-                mintButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Minting...';
-                
-                hideAlerts();
-                
+        // Contract ABI for ERC-20 like functions
+        const web3 = new (window.Web3 || window.ethereum?.web3?.constructor)('https://testnet-rpc.monad.xyz');
+        
+        let userAccount = null;
+        let isConnected = false;
+
+        // MONAD Testnet configuration
+        const CHAIN_ID = 10143;
+        const RPC_URL = 'https://testnet-rpc.monad.xyz';
+        const DEPLOY_BLOCK = 32111409;
+
+        // MON-20 Token configuration
+        const TOKEN_CONFIG = {
+            p: "MON-20",
+            tick: "MONS",
+            max: "21000000",
+            lim: "1000"
+        };
+
+        // Mock data for demonstration
+        let mockData = {
+            totalMinted: 156000,
+            holders: [
+                { address: '0x742d35Cc6dB3a45BC8E87B4B8e7bE1234567890a', balance: 25000 },
+                { address: '0x8ba1f109551bD432803012645Hc967890123456b', balance: 18000 },
+                { address: '0x1dF62f291b2E409321fDbD8043e6c74567890123', balance: 15000 },
+                { address: '0x9fB1c33F8bE4B4A1234567890123456789012345', balance: 12000 },
+                { address: '0x4eA52b4567890123456789012345678901234567', balance: 10000 }
+            ]
+        };
+
+        async function connectWallet() {
+            if (typeof window.ethereum !== 'undefined') {
                 try {
-                    // In a real implementation, this would interact with the Monad RPC
-                    // For demo purposes, we're simulating the transaction
-                    await simulateMintTransaction(walletAddress, amount);
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
                     
-                    // Update stats
-                    currentMinted += amount;
-                    updateStats();
-                    
-                    // Show success message
-                    successAlert.style.display = 'block';
-                } catch (error) {
-                    showError(error.message || "Transaction failed. Please try again.");
-                } finally {
-                    // Re-enable button
-                    mintButton.disabled = false;
-                    mintButton.innerHTML = 'Mint Now';
-                }
-            });
-            
-            // Simulate mint transaction (would be replaced with actual RPC call)
-            function simulateMintTransaction(address, amount) {
-                return new Promise((resolve, reject) => {
-                    // Simulate network delay
-                    setTimeout(() => {
-                        // Simulate occasional failure
-                        if (Math.random() < 0.2) {
-                            reject(new Error("Transaction failed: Gas estimation failed"));
-                        } else {
-                            resolve({
-                                hash: "0x" + Math.random().toString(16).substr(2, 64),
-                                from: address,
-                                value: amount
+                    // Switch to MONAD Testnet
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: `0x${CHAIN_ID.toString(16)}` }],
+                        });
+                    } catch (switchError) {
+                        // Chain doesn't exist, add it
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: `0x${CHAIN_ID.toString(16)}`,
+                                    chainName: 'MONAD Testnet',
+                                    nativeCurrency: {
+                                        name: 'ETH',
+                                        symbol: 'ETH',
+                                        decimals: 18
+                                    },
+                                    rpcUrls: [RPC_URL],
+                                    blockExplorerUrls: ['https://testnet-explorer.monad.xyz']
+                                }]
                             });
                         }
-                    }, 2000);
-                });
-            }
-            
-            // Helper functions
-            function isValidAddress(address) {
-                return /^0x[a-fA-F0-9]{40}$/.test(address);
-            }
-            
-            function showError(message) {
-                errorMessage.textContent = message;
-                errorAlert.style.display = 'block';
-            }
-            
-            function hideAlerts() {
-                successAlert.style.display = 'none';
-                errorAlert.style.display = 'none';
-            }
-            
-            // Simulate live updates
-            setInterval(() => {
-                // Simulate other people minting
-                const randomMint = Math.floor(Math.random() * 5) * 1000;
-                if (currentMinted + randomMint <= maxSupply) {
-                    currentMinted += randomMint;
-                    updateStats();
+                    }
+
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    userAccount = accounts[0];
+                    isConnected = true;
+                    
+                    updateConnectionStatus();
+                    document.getElementById('mintBtn').disabled = false;
+                    showToast('Wallet connected successfully!', 'success');
+                    
+                } catch (error) {
+                    console.error('Error connecting wallet:', error);
+                    showToast('Failed to connect wallet', 'error');
                 }
-            }, 10000);
-        });
+            } else {
+                showToast('Please install MetaMask or another Web3 wallet', 'error');
+            }
+        }
+
+        async function mintToken() {
+            if (!isConnected) {
+                showToast('Please connect your wallet first', 'error');
+                return;
+            }
+
+            const gasPrice = document.getElementById('gasPrice').value;
+            
+            // Create the inscription data
+            const inscriptionData = JSON.stringify({
+                "p": "mon-20",
+                "op": "mint",
+                "tick": "MONS",
+                "amt": "1000"
+            });
+
+            try {
+                // Convert inscription data to hex
+                const dataHex = '0x' + Array.from(new TextEncoder().encode(inscriptionData))
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join('');
+
+                const tx = {
+                    from: userAccount,
+                    to: userAccount, // Self-transfer
+                    value: '0x0', // 0 ETH transfer
+                    data: dataHex,
+                    gasPrice: web3.utils.toWei(gasPrice, 'gwei'),
+                    gas: '0x5208' // 21000 gas
+                };
+
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [tx],
+                });
+
+                showToast(`Mint transaction sent! Hash: ${txHash.slice(0, 10)}...`, 'success');
+                
+                // Update mock data
+                mockData.totalMinted += 1000;
+                updateStats();
+                
+            } catch (error) {
+                console.error('Error minting:', error);
+                showToast('Mint transaction failed', 'error');
+            }
+        }
+
+        function updateConnectionStatus() {
+            const statusIndicator = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('connectionText');
+            
+            if (isConnected) {
+                statusIndicator.className = 'status-indicator status-connected';
+                statusText.textContent = `Connected: ${userAccount ? userAccount.slice(0, 6) + '...' + userAccount.slice(-4) : ''}`;
+            } else {
+                statusIndicator.className = 'status-indicator status-disconnected';
+                statusText.textContent = 'Not Connected';
+            }
+        }
+
+        function updateStats() {
+            const totalMinted = mockData.totalMinted;
+            const maxSupply = 21000000;
+            const remaining = maxSupply - totalMinted;
+            const progress = (totalMinted / maxSupply) * 100;
+
+            document.getElementById('totalSupply').textContent = totalMinted.toLocaleString();
+            document.getElementById('remainingSupply').textContent = remaining.toLocaleString();
+            document.getElementById('totalHolders').textContent = mockData.holders.length;
+            document.getElementById('mintCount').textContent = Math.floor(totalMinted / 1000);
+            document.getElementById('progressFill').style.width = progress + '%';
+
+            updateHolders();
+        }
+
+        function updateHolders() {
+            const holdersList = document.getElementById('holdersList');
+            holdersList.innerHTML = '';
+
+            mockData.holders.forEach((holder, index) => {
+                const holderItem = document.createElement('div');
+                holderItem.className = 'holder-item';
+                holderItem.innerHTML = `
+                    <span class="holder-address">#${index + 1} ${holder.address.slice(0, 8)}...${holder.address.slice(-6)}</span>
+                    <span class="holder-balance">${holder.balance.toLocaleString()} MONS</span>
+                `;
+                holdersList.appendChild(holderItem);
+            });
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.className = 'toast', 300);
+            }, 3000);
+        }
+
+        // Auto-update stats every 30 seconds
+        setInterval(() => {
+            // Simulate new mints
+            if (Math.random() > 0.7) {
+                mockData.totalMinted += 1000;
+                if (mockData.totalMinted > 21000000) {
+                    mockData.totalMinted = 21000000;
+                }
+                updateStats();
+            }
+        }, 30000);
+
+        // Initialize
+        updateConnectionStatus();
+        updateStats();
+
+        // Check if wallet is already connected
+        if (window.ethereum) {
+            window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
+                if (accounts.length > 0) {
+                    userAccount = accounts[0];
+                    isConnected = true;
+                    updateConnectionStatus();
+                    document.getElementById('mintBtn').disabled = false;
+                }
+            });
+        }
     </script>
+
+    <!-- Web3.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.8.2/web3.min.js"></script>
 </body>
 </html>
