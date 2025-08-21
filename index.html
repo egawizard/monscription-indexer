@@ -91,6 +91,28 @@
             margin-bottom: 40px;
         }
 
+        .user-balance {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        .balance-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4ecdc4;
+            margin-bottom: 5px;
+        }
+
+        .balance-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
         .mint-section {
             background: rgba(255, 255, 255, 0.1);
             padding: 30px;
@@ -397,6 +419,11 @@
 
         <div class="main-content">
             <div class="mint-section">
+                <div class="user-balance" id="userBalanceSection" style="display: none;">
+                    <div class="balance-value" id="userBalance">0</div>
+                    <div class="balance-label">Your MONS Balance</div>
+                </div>
+                
                 <h2>Mint MONS Tokens</h2>
                 <div class="input-group">
                     <label>Amount (Fixed: 1000 MONS)</label>
@@ -461,11 +488,17 @@
         let userAccount = null;
         let isConnected = false;
         let currentBlockNumber = 0;
+        let isIndexing = false;
         let inscriptionData = {
             totalMinted: 0,
             holders: new Map(),
-            mintCount: 0
+            mintCount: 0,
+            lastProcessedBlock: DEPLOY_BLOCK - 1
         };
+
+        // Cache untuk mempercepat indexing
+        let processedBlocks = new Set();
+        let validMintTxs = new Set();
 
         // Initialize Web3 connection
         async function initWeb3() {
@@ -487,6 +520,8 @@
             } catch (error) {
                 console.error('Failed to initialize Web3:', error);
                 showToast('Failed to connect to MONAD network', 'error');
+                // Set fallback data to stop loading
+                updateStats();
             }
         }
 
@@ -530,10 +565,11 @@
                 }
 
                 const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                userAccount = accounts[0];
+                userAccount = accounts[0].toLowerCase(); // Store as lowercase for consistent comparison
                 isConnected = true;
                 
                 updateConnectionStatus();
+                updateUserBalance(); // Update balance after connection
                 document.getElementById('mintBtn').disabled = false;
                 document.getElementById('connectBtn').textContent = `${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`;
                 showToast('Wallet connected successfully!', 'success');
@@ -612,7 +648,14 @@
 
                 // Wait for confirmation and re-index
                 setTimeout(async () => {
-                    await indexInscriptions();
+                    showToast('Refreshing inscription data...', 'success');
+                    // Force refresh from recent blocks only
+                    const newCurrentBlock = await web3.eth.getBlockNumber();
+                    if (newCurrentBlock > currentBlockNumber) {
+                        currentBlockNumber = newCurrentBlock;
+                        inscriptionData.lastProcessedBlock = Math.max(inscriptionData.lastProcessedBlock, currentBlockNumber - 100);
+                        await indexInscriptions();
+                    }
                 }, 15000); // Wait 15 seconds for block confirmation
                 
             } catch (error) {
@@ -625,38 +668,57 @@
         }
 
         async function indexInscriptions() {
+            if (isIndexing) {
+                console.log('Indexing already in progress, skipping...');
+                return;
+            }
+            
+            isIndexing = true;
+            
             try {
                 console.log('Starting inscription indexing...');
                 
-                // Reset data
-                inscriptionData = {
-                    totalMinted: 0,
-                    holders: new Map(),
-                    mintCount: 0
-                };
-
-                const fromBlock = DEPLOY_BLOCK;
-                const toBlock = Math.min(fromBlock + 10000, currentBlockNumber); // Process in chunks
+                const fromBlock = Math.max(inscriptionData.lastProcessedBlock + 1, DEPLOY_BLOCK);
+                const toBlock = currentBlockNumber;
+                
+                if (fromBlock > toBlock) {
+                    console.log('No new blocks to process');
+                    updateStats();
+                    return;
+                }
                 
                 console.log(`Indexing from block ${fromBlock} to ${toBlock}`);
 
-                // Get all transactions from deploy block
-                for (let blockNum = fromBlock; blockNum <= toBlock; blockNum += 100) {
-                    const endBlock = Math.min(blockNum + 99, toBlock);
-                    console.log(`Processing blocks ${blockNum} to ${endBlock}`);
+                // Process blocks in smaller chunks for better performance
+                const CHUNK_SIZE = 500;
+                for (let start = fromBlock; start <= toBlock; start += CHUNK_SIZE) {
+                    const end = Math.min(start + CHUNK_SIZE - 1, toBlock);
+                    
+                    if (processedBlocks.has(`${start}-${end}`)) {
+                        continue; // Skip already processed chunks
+                    }
+                    
+                    console.log(`Processing chunk ${start} to ${end}`);
                     
                     try {
-                        const logs = await web3.eth.getPastLogs({
-                            fromBlock: blockNum,
-                            toBlock: endBlock
-                        });
-
-                        // Process each transaction that might contain inscription data
-                        for (const log of logs) {
-                            await processTransaction(log.transactionHash);
+                        // Get blocks in this range
+                        for (let blockNum = start; blockNum <= end; blockNum++) {
+                            const block = await web3.eth.getBlock(blockNum, true);
+                            if (block && block.transactions) {
+                                for (const tx of block.transactions) {
+                                    if (tx.input && tx.input !== '0x' && tx.from === tx.to) {
+                                        await processTransaction(tx);
+                                    }
+                                }
+                            }
                         }
+                        
+                        processedBlocks.add(`${start}-${end}`);
+                        inscriptionData.lastProcessedBlock = end;
+                        
                     } catch (error) {
-                        console.warn(`Error processing block range ${blockNum}-${endBlock}:`, error);
+                        console.warn(`Error processing chunk ${start}-${end}:`, error);
+                        break; // Stop on error to prevent infinite loops
                     }
                 }
 
@@ -666,17 +728,37 @@
             } catch (error) {
                 console.error('Error indexing inscriptions:', error);
                 showToast('Error loading inscription data', 'error');
+                // Set default values to stop loading indicators
+                updateStats();
+            } finally {
+                isIndexing = false;
             }
         }
 
-        async function processTransaction(txHash) {
+        async function processTransaction(tx) {
             try {
-                const tx = await web3.eth.getTransaction(txHash);
-                if (!tx || !tx.input || tx.input === '0x') return;
+                // Skip if already processed
+                if (validMintTxs.has(tx.hash)) {
+                    return;
+                }
+                
+                if (!tx.input || tx.input === '0x') return;
 
                 // Decode hex data
                 const hexData = tx.input.slice(2);
-                const decodedData = hexToString(hexData);
+                let decodedData = '';
+                
+                try {
+                    // Convert hex to string
+                    for (let i = 0; i < hexData.length; i += 2) {
+                        const hexCode = hexData.substr(i, 2);
+                        if (hexCode) {
+                            decodedData += String.fromCharCode(parseInt(hexCode, 16));
+                        }
+                    }
+                } catch (e) {
+                    return; // Skip invalid hex
+                }
                 
                 try {
                     const jsonData = JSON.parse(decodedData);
@@ -695,14 +777,17 @@
                         const currentBalance = inscriptionData.holders.get(tx.from) || 0;
                         inscriptionData.holders.set(tx.from, currentBalance + 1000);
                         
-                        console.log(`Valid mint found: ${tx.from} minted 1000 MONS`);
+                        // Cache this transaction
+                        validMintTxs.add(tx.hash);
+                        
+                        console.log(`Valid mint found: ${tx.from} minted 1000 MONS (tx: ${tx.hash})`);
                     }
                 } catch (e) {
-                    // Not valid JSON, ignore
+                    // Not valid JSON, ignore silently
                 }
                 
             } catch (error) {
-                console.warn('Error processing transaction:', txHash, error);
+                console.warn('Error processing transaction:', tx.hash, error);
             }
         }
 
@@ -717,17 +802,33 @@
 
         function updateStats() {
             const totalMinted = inscriptionData.totalMinted;
-            const remaining = MAX_SUPPLY - totalMinted;
-            const progress = (totalMinted / MAX_SUPPLY) * 100;
+            const remaining = Math.max(0, MAX_SUPPLY - totalMinted);
+            const progress = Math.min((totalMinted / MAX_SUPPLY) * 100, 100);
             const holdersCount = inscriptionData.holders.size;
 
+            // Update main stats
             document.getElementById('totalSupply').textContent = totalMinted.toLocaleString();
             document.getElementById('remainingSupply').textContent = remaining.toLocaleString();
             document.getElementById('totalHolders').textContent = holdersCount;
             document.getElementById('mintCount').textContent = inscriptionData.mintCount;
-            document.getElementById('progressFill').style.width = Math.min(progress, 100) + '%';
+            document.getElementById('progressFill').style.width = progress + '%';
 
+            // Update user balance if connected
+            updateUserBalance();
             updateHolders();
+        }
+
+        function updateUserBalance() {
+            const balanceSection = document.getElementById('userBalanceSection');
+            const balanceElement = document.getElementById('userBalance');
+            
+            if (isConnected && userAccount) {
+                const userBalance = inscriptionData.holders.get(userAccount.toLowerCase()) || 0;
+                balanceElement.textContent = userBalance.toLocaleString();
+                balanceSection.style.display = 'block';
+            } else {
+                balanceSection.style.display = 'none';
+            }
         }
 
         function updateHolders() {
@@ -780,16 +881,21 @@
             }, 5000);
         }
 
-        // Auto-refresh data every 30 seconds
+        // Auto-refresh data every 60 seconds (increased from 30)
         setInterval(async () => {
-            if (web3) {
-                const newBlockNumber = await web3.eth.getBlockNumber();
-                if (newBlockNumber > currentBlockNumber) {
-                    currentBlockNumber = newBlockNumber;
-                    await indexInscriptions();
+            if (web3 && !isIndexing) {
+                try {
+                    const newBlockNumber = await web3.eth.getBlockNumber();
+                    if (newBlockNumber > currentBlockNumber) {
+                        console.log(`New blocks detected: ${currentBlockNumber} -> ${newBlockNumber}`);
+                        currentBlockNumber = newBlockNumber;
+                        await indexInscriptions();
+                    }
+                } catch (error) {
+                    console.error('Error in auto-refresh:', error);
                 }
             }
-        }, 30000);
+        }, 60000);
 
         // Initialize when page loads
         window.addEventListener('load', async () => {
@@ -805,9 +911,11 @@
                     userAccount = null;
                     document.getElementById('mintBtn').disabled = true;
                     document.getElementById('connectBtn').textContent = 'Connect Wallet';
+                    document.getElementById('userBalanceSection').style.display = 'none';
                 } else {
-                    userAccount = accounts[0];
+                    userAccount = accounts[0].toLowerCase();
                     document.getElementById('connectBtn').textContent = `${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`;
+                    updateUserBalance(); // Update balance when account changes
                 }
                 updateConnectionStatus();
             });
