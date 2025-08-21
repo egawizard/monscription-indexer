@@ -9,7 +9,333 @@
     :root{
       --bg:#0b0d14;--card:#141827;--accent:#4ecdc4;--accent2:#45b7d1;--muted:#9aa3b2;--text:#e9eef5;
     }
+    *{box-sizing:border-box}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MONAD MON-20 • Inscription Indexer & Minter</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.8.2/web3.min.js"></script>
+  <style>
+    :root{
+      --bg:#0b0d14;--card:#141827;--accent:#4ecdc4;--accent2:#45b7d1;--muted:#9aa3b2;--text:#e9eef5;
+    }
     *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+    .container{max-width:1100px;margin:0 auto;padding:28px}
+    .title{font-weight:800;text-align:center;font-size:28px;margin:8px 0 6px}
+    .subtitle{text-align:center;color:var(--muted);margin:0 0 18px}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px auto 8px;max-width:980px}
+    .card{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+    .card h2{margin:0;font-size:28px;color:var(--accent)}
+    .card p{margin:6px 0 0;color:var(--muted);font-size:13px}
+    .progress{height:12px;background:#262a3a;border-radius:8px;overflow:hidden;margin:12px auto;max-width:980px}
+    .bar{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .25s ease}
+    .row{display:flex;gap:12px;align-items:center;justify-content:center;margin:16px 0}
+    button{background:var(--accent);border:none;color:#031016;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer}
+    button.secondary{background:#23283a;color:var(--text)}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .holders{max-width:980px;margin:18px auto}
+    .holders h3{margin:0 0 10px}
+    .holder{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.06)}
+    .footer{opacity:.7;text-align:center;margin:22px 0 10px;font-size:13px}
+    .mono{font-family: ui-monospace,SFMono-Regular,Menlo,monospace}
+    .status{color:var(--muted);text-align:center;margin-top:4px}
+    .pill{display:inline-block;background:#23283a;color:var(--text);padding:6px 10px;border-radius:999px}
+    @media (max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">MONAD MON-20</div>
+    <div id="subtitle" class="subtitle">The First Inscription Token on MONAD Testnet ($MONS)</div>
+
+    <div class="stats">
+      <div class="card"><h2 id="totalMinted">0</h2><p>Total Minted</p></div>
+      <div class="card"><h2 id="remaining">21,000,000</h2><p>Remaining</p></div>
+      <div class="card"><h2 id="holders">0</h2><p>Holders</p></div>
+      <div class="card"><h2 id="mintCount">0</h2><p>Mint Count</p></div>
+    </div>
+
+    <div class="progress"><div id="progressFill" class="bar"></div></div>
+    <div id="scanStatus" class="status">Connecting RPC…</div>
+    <div id="lastBlock" class="status">Last synced block: -</div>
+
+    <div class="row">
+      <button id="connectBtn" class="secondary" onclick="connectWallet()">Connect Wallet</button>
+      <button id="mintBtn" onclick="mintToken()" disabled>Mint 1000 MONS</button>
+      <button id="resyncBtn" class="secondary" onclick="forceResync()">Resync from Deploy</button>
+      <span id="addrPill" class="pill mono" style="display:none"></span>
+    </div>
+
+    <div class="card holders">
+      <h3>Top Holders</h3>
+      <div id="holdersList" class="mono"><div class="holder"><span>No holders yet</span><span>0 MONS</span></div></div>
+    </div>
+
+    <div class="footer">
+      Created by <a href="https://x.com/ega_2ez4crypto" target="_blank" style="color:var(--accent)">@ega_2ez4crypto</a><br/>
+      Fully decentralized • No database • All data onchain
+    </div>
+  </div>
+
+<script>
+/***********************
+ * MON-20 PARAMETERS
+ ************************/
+const MONAD = {
+  chainId: 10143,
+  rpcUrl: 'https://rpc.ankr.com/monad_testnet'
+};
+const TICK = 'MONS';
+const MAX_SUPPLY = 21_000_000;
+const MINT_LIMIT = 1_000;
+const DEPLOY_BLOCK = 32111409;
+const SCAN_BATCH = 150;
+
+let web3Read;
+let web3Wallet = null;
+let currentAccount = null;
+
+const state = {
+  totalMinted: 0,
+  mintCount: 0,
+  holders: new Map(),
+  lastProcessed: DEPLOY_BLOCK - 1
+};
+
+window.addEventListener('load', async () => {
+  web3Read = new Web3(MONAD.rpcUrl);
+  setScanStatus('RPC connected. Indexing chain…');
+  const loaded = loadCache();
+  if (!loaded) {
+    state.lastProcessed = DEPLOY_BLOCK - 1;
+  }
+  await fullIndexFromLastProcessed();
+  setInterval(async () => {
+    try {
+      const latest = await web3Read.eth.getBlockNumber();
+      if (latest > state.lastProcessed) {
+        await indexRange(state.lastProcessed + 1, latest);
+      }
+    } catch (e) {
+      console.warn('tail error', e);
+    }
+  }, 15_000);
+});
+
+function setScanStatus(msg){
+  document.getElementById('scanStatus').innerText = msg;
+}
+
+function updateLastBlock(){
+  document.getElementById('lastBlock').innerText = `Last synced block: ${state.lastProcessed.toLocaleString()}`;
+}
+
+async function connectWallet(){
+  if(!window.ethereum){ alert('Wallet (MetaMask) not found.'); return; }
+  try{
+    await ensureMonadNetwork();
+    const accs = await window.ethereum.request({ method:'eth_requestAccounts' });
+    currentAccount = accs[0];
+    web3Wallet = new Web3(window.ethereum);
+    document.getElementById('connectBtn').innerText = 'Wallet Connected';
+    document.getElementById('mintBtn').disabled = false;
+    const pill = document.getElementById('addrPill');
+    pill.style.display='inline-block';
+    pill.textContent = shortAddr(currentAccount);
+    document.getElementById('subtitle').innerText = `Wallet: ${currentAccount}`;
+  }catch(e){ console.error(e); }
+}
+
+async function ensureMonadNetwork(){
+  const hex = '0x'+MONAD.chainId.toString(16);
+  try{
+    await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{ chainId:hex }] });
+  }catch(switchErr){
+    try{
+      await window.ethereum.request({ method:'wallet_addEthereumChain', params:[{
+        chainId:hex,
+        chainName:'Monad Testnet',
+        rpcUrls:[MONAD.rpcUrl],
+        nativeCurrency:{ name:'MON', symbol:'MON', decimals:18 },
+        blockExplorerUrls:['https://testnet.monadexplorer.com']
+      }] });
+    }catch(addErr){ console.error(addErr); }
+  }
+}
+
+function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : ''; }
+
+async function mintToken(){
+  if(!currentAccount){ alert('Connect wallet first'); return; }
+  const inscription = { p:'mon-20', op:'mint', tick:TICK, amt:String(MINT_LIMIT) };
+  const dataHex = '0x' + toHex(JSON.stringify(inscription));
+  const tx = { from: currentAccount, to: currentAccount, value:'0x0', data:dataHex };
+  try{
+    const txHash = await window.ethereum.request({ method:'eth_sendTransaction', params:[tx] });
+    alert('Mint sent: '+txHash);
+    pollAndProcessTx(txHash);
+  }catch(e){ console.error(e); alert('Mint failed: '+(e?.message||e)); }
+}
+
+async function pollAndProcessTx(hash){
+  try{
+    for(let i=0;i<40;i++){
+      const fullTx = await web3Read.eth.getTransaction(hash);
+      if(fullTx && fullTx.blockNumber){
+        safeProcessTransaction(fullTx);
+        updateUI();
+        saveCache();
+        updateLastBlock();
+        break;
+      }
+      await sleep(1000);
+    }
+  }catch(e){ console.warn('poll error', e); }
+}
+
+async function fullIndexFromLastProcessed(){
+  try{
+    const latest = await web3Read.eth.getBlockNumber();
+    setScanStatus(`Starting index from block ${state.lastProcessed+1} to ${latest}…`);
+    if (latest > state.lastProcessed) {
+      await indexRange(state.lastProcessed+1, latest);
+    }
+  }catch(e){ console.error('initial index failed', e); setScanStatus('Indexing failed: '+e.message); }
+}
+
+async function indexRange(from, to){
+  if(to < from){ return; }
+  for(let start = from; start <= to; start += SCAN_BATCH){
+    const end = Math.min(start + SCAN_BATCH - 1, to);
+    setScanStatus(`Indexing blocks ${start.toLocaleString()} - ${end.toLocaleString()}…`);
+    for(let b = start; b <= end; b++){
+      try{
+        const block = await web3Read.eth.getBlock(b, false);
+        if(!block || !block.transactions) { state.lastProcessed = b; continue; }
+        for(const txHash of block.transactions){
+          const fullTx = await web3Read.eth.getTransaction(txHash);
+          if(fullTx) safeProcessTransaction(fullTx);
+        }
+        state.lastProcessed = b;
+      }catch(e){ console.warn('block error', e); }
+    }
+    updateUI();
+    saveCache();
+    updateLastBlock();
+    await sleep(80);
+  }
+  setScanStatus(`Synced up to block ${state.lastProcessed.toLocaleString()}.`);
+  updateLastBlock();
+}
+
+function safeProcessTransaction(tx){
+  try{
+    if(!tx || !tx.input || tx.input === '0x') return;
+    if(!tx.from || !tx.to) return;
+    if(tx.from.toLowerCase() !== tx.to.toLowerCase()) return;
+    const json = tryParseInscription(tx.input);
+    if(!json) return;
+
+    const p = (json.p||json.P||'').toString();
+    const op = (json.op||json.OP||'').toString();
+    const tick = (json.tick||json.TICK||'').toString();
+
+    if(p.toUpperCase()==='MON-20' && op.toLowerCase()==='deploy'){
+      return;
+    }
+
+    if(p.toUpperCase()==='MON-20' && op.toLowerCase()==='mint' && tick===TICK){
+      const amt = String(json.amt||json.AMT||'');
+      if(amt !== String(MINT_LIMIT)) return;
+      if(state.totalMinted + MINT_LIMIT > MAX_SUPPLY) return;
+
+      const addr = tx.from.toLowerCase();
+      const prev = state.holders.get(addr)||0;
+      state.holders.set(addr, prev + MINT_LIMIT);
+      state.totalMinted += MINT_LIMIT;
+      state.mintCount += 1;
+    }
+  }catch(e){ }
+}
+
+function tryParseInscription(inputHex){
+  try{
+    const hex = inputHex.startsWith('0x') ? inputHex.slice(2) : inputHex;
+    let out='';
+    for(let i=0;i<hex.length;i+=2){ out += String.fromCharCode(parseInt(hex.substr(i,2),16)); }
+    return JSON.parse(out);
+  }catch{ return null; }
+}
+
+function toHex(str){
+  const bytes = new TextEncoder().encode(str);
+  return Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function updateUI(){
+  const minted = state.totalMinted;
+  const remaining = Math.max(0, MAX_SUPPLY - minted);
+  document.getElementById('totalMinted').innerText = minted.toLocaleString();
+  document.getElementById('remaining').innerText = remaining.toLocaleString();
+  document.getElementById('holders').innerText = state.holders.size.toLocaleString();
+  document.getElementById('mintCount').innerText = state.mintCount.toLocaleString();
+  document.getElementById('progressFill').style.width = Math.min(100, (minted / MAX_SUPPLY) * 100) + '%';
+
+  const holdersList = document.getElementById('holdersList');
+  holdersList.innerHTML = '';
+  const top = Array.from(state.holders.entries()).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  if(top.length===0){ holdersList.innerHTML = '<div class="holder"><span>No holders yet</span><span>0 MONS</span></div>'; return; }
+  top.forEach(([addr,b])=>{
+    holdersList.innerHTML += `<div class="holder"><span>${addr}</span><span>${b.toLocaleString()} MONS</span></div>`;
+  });
+}
+
+function saveCache(){
+  try{
+    const cache = {
+      totalMinted: state.totalMinted,
+      mintCount: state.mintCount,
+      holders: Array.from(state.holders.entries()),
+      lastProcessed: state.lastProcessed
+    };
+    localStorage.setItem('monsIndexerCache', JSON.stringify(cache));
+  }catch(e){ console.warn('cache save fail', e); }
+}
+
+function loadCache(){
+  try{
+    const raw = localStorage.getItem('monsIndexerCache');
+    if(!raw) return false;
+    const cache = JSON.parse(raw);
+    state.totalMinted = cache.totalMinted;
+    state.mintCount = cache.mintCount;
+    state.holders = new Map(cache.holders);
+    state.lastProcessed = cache.lastProcessed;
+    updateUI();
+    updateLastBlock();
+    setScanStatus(`Loaded cached state up to block ${state.lastProcessed}`);
+    return true;
+  }catch(e){ console.warn('cache load fail', e); return false; }
+}
+
+function forceResync(){
+  state.totalMinted = 0;
+  state.mintCount = 0;
+  state.holders = new Map();
+  state.lastProcessed = DEPLOY_BLOCK - 1;
+  updateUI();
+  updateLastBlock();
+  localStorage.removeItem('monsIndexerCache');
+  fullIndexFromLastProcessed();
+}
+</script>
+</body>
+</html>
+
     body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
     .container{max-width:1100px;margin:0 auto;padding:28px}
     .title{font-weight:800;text-align:center;font-size:28px;margin:8px 0 6px}
