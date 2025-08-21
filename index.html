@@ -52,6 +52,7 @@
     <div class="row">
       <button id="connectBtn" class="secondary" onclick="connectWallet()">Connect Wallet</button>
       <button id="mintBtn" onclick="mintToken()" disabled>Mint 1000 MONS</button>
+      <button id="resyncBtn" class="secondary" onclick="forceResync()">Resync from Deploy</button>
       <span id="addrPill" class="pill mono" style="display:none"></span>
     </div>
 
@@ -94,7 +95,8 @@ const state = {
 window.addEventListener('load', async () => {
   web3Read = new Web3(MONAD.rpcUrl);
   setScanStatus('RPC connected. Indexing chain…');
-  await fullIndexFromDeploy();
+  loadCache();
+  await fullIndexFromLastProcessed();
   setInterval(async () => {
     try {
       const latest = await web3Read.eth.getBlockNumber();
@@ -165,6 +167,7 @@ async function pollAndProcessTx(hash){
       if(fullTx && fullTx.blockNumber){
         safeProcessTransaction(fullTx);
         updateUI();
+        saveCache();
         break;
       }
       await sleep(1000);
@@ -172,7 +175,7 @@ async function pollAndProcessTx(hash){
   }catch(e){ console.warn('poll error', e); }
 }
 
-async function fullIndexFromDeploy(){
+async function fullIndexFromLastProcessed(){
   try{
     const latest = await web3Read.eth.getBlockNumber();
     await indexRange(state.lastProcessed + 1, latest);
@@ -196,6 +199,7 @@ async function indexRange(from, to){
       }catch(e){ console.warn('block error', e); }
     }
     updateUI();
+    saveCache();
     await sleep(80);
   }
   setScanStatus(`Synced up to block ${state.lastProcessed.toLocaleString()}.`);
@@ -263,6 +267,42 @@ function updateUI(){
   top.forEach(([addr,b])=>{
     holdersList.innerHTML += `<div class="holder"><span>${addr}</span><span>${b.toLocaleString()} MONS</span></div>`;
   });
+}
+
+function saveCache(){
+  try{
+    const cache = {
+      totalMinted: state.totalMinted,
+      mintCount: state.mintCount,
+      holders: Array.from(state.holders.entries()),
+      lastProcessed: state.lastProcessed
+    };
+    localStorage.setItem('monsIndexerCache', JSON.stringify(cache));
+  }catch(e){ console.warn('cache save fail', e); }
+}
+
+function loadCache(){
+  try{
+    const raw = localStorage.getItem('monsIndexerCache');
+    if(!raw) return;
+    const cache = JSON.parse(raw);
+    state.totalMinted = cache.totalMinted;
+    state.mintCount = cache.mintCount;
+    state.holders = new Map(cache.holders);
+    state.lastProcessed = cache.lastProcessed;
+    updateUI();
+    setScanStatus(`Loaded cached state up to block ${state.lastProcessed}`);
+  }catch(e){ console.warn('cache load fail', e); }
+}
+
+function forceResync(){
+  state.totalMinted = 0;
+  state.mintCount = 0;
+  state.holders = new Map();
+  state.lastProcessed = DEPLOY_BLOCK - 1;
+  updateUI();
+  localStorage.removeItem('monsIndexerCache');
+  fullIndexFromLastProcessed();
 }
 </script>
 </body>
