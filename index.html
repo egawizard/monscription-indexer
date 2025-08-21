@@ -96,7 +96,10 @@ const state = {
 window.addEventListener('load', async () => {
   web3Read = new Web3(MONAD.rpcUrl);
   setScanStatus('RPC connected. Indexing chain…');
-  loadCache();
+  const loaded = loadCache();
+  if(!loaded){
+    state.lastProcessed = DEPLOY_BLOCK - 1;
+  }
   await fullIndexFromLastProcessed();
   setInterval(async () => {
     try {
@@ -173,6 +176,7 @@ async function pollAndProcessTx(hash){
         safeProcessTransaction(fullTx);
         updateUI();
         saveCache();
+        updateLastBlock();
         break;
       }
       await sleep(1000);
@@ -183,7 +187,9 @@ async function pollAndProcessTx(hash){
 async function fullIndexFromLastProcessed(){
   try{
     const latest = await web3Read.eth.getBlockNumber();
-    await indexRange(state.lastProcessed + 1, latest);
+    if(latest > state.lastProcessed){
+      await indexRange(state.lastProcessed + 1, latest);
+    }
   }catch(e){ console.error('initial index failed', e); setScanStatus('Indexing failed: '+e.message); }
 }
 
@@ -194,7 +200,7 @@ async function indexRange(from, to){
     setScanStatus(`Indexing blocks ${start.toLocaleString()} - ${end.toLocaleString()}…`);
     for(let b = start; b <= end; b++){
       try{
-        const block = await web3Read.eth.getBlock(b, false); // only tx hashes
+        const block = await web3Read.eth.getBlock(b, false);
         if(!block || !block.transactions) { state.lastProcessed = b; continue; }
         for(const txHash of block.transactions){
           const fullTx = await web3Read.eth.getTransaction(txHash);
@@ -291,7 +297,7 @@ function saveCache(){
 function loadCache(){
   try{
     const raw = localStorage.getItem('monsIndexerCache');
-    if(!raw) return;
+    if(!raw) return false;
     const cache = JSON.parse(raw);
     state.totalMinted = cache.totalMinted;
     state.mintCount = cache.mintCount;
@@ -300,7 +306,8 @@ function loadCache(){
     updateUI();
     updateLastBlock();
     setScanStatus(`Loaded cached state up to block ${state.lastProcessed}`);
-  }catch(e){ console.warn('cache load fail', e); }
+    return true;
+  }catch(e){ console.warn('cache load fail', e); return false; }
 }
 
 function forceResync(){
