@@ -519,9 +519,6 @@
             lastProcessedBlock: DEPLOY_BLOCK - 1
         };
 
-        // Cache key for localStorage alternative (using memory)
-        let dataCache = null;
-
         // Initialize Web3 connection
         async function initWeb3() {
             try {
@@ -542,7 +539,7 @@
                     throw new Error('Failed to connect to MONAD RPC: ' + error.message);
                 }
 
-                // Load cached data first (if available)
+                // Load cached data from localStorage if available
                 loadCachedData();
                 
                 // Show cached data immediately
@@ -560,28 +557,54 @@
         }
 
         function loadCachedData() {
-            // In a real implementation, you'd load from localStorage
-            // For now, we'll use memory cache
-            if (dataCache) {
-                inscriptionData = { ...dataCache };
-                console.log('Loaded cached data:', {
-                    totalMinted: inscriptionData.totalMinted,
-                    holders: inscriptionData.holders.size,
-                    lastProcessedBlock: inscriptionData.lastProcessedBlock
-                });
+            try {
+                const cachedData = localStorage.getItem('mon20_inscription_data');
+                if (cachedData) {
+                    const parsedData = JSON.parse(cachedData);
+                    
+                    // Convert holders array back to Map
+                    const holdersMap = new Map();
+                    if (parsedData.holders && Array.isArray(parsedData.holders)) {
+                        parsedData.holders.forEach(([address, balance]) => {
+                            holdersMap.set(address, balance);
+                        });
+                    }
+                    
+                    inscriptionData = {
+                        totalMinted: parsedData.totalMinted || 0,
+                        holders: holdersMap,
+                        mintCount: parsedData.mintCount || 0,
+                        lastProcessedBlock: parsedData.lastProcessedBlock || (DEPLOY_BLOCK - 1)
+                    };
+                    
+                    console.log('Loaded cached data:', {
+                        totalMinted: inscriptionData.totalMinted,
+                        holders: inscriptionData.holders.size,
+                        lastProcessedBlock: inscriptionData.lastProcessedBlock
+                    });
+                }
+            } catch (e) {
+                console.error('Error loading cached data:', e);
             }
         }
 
         function saveDataToCache() {
-            // Convert Map to object for storage
-            const cacheData = {
-                totalMinted: inscriptionData.totalMinted,
-                holders: new Map(inscriptionData.holders),
-                mintCount: inscriptionData.mintCount,
-                lastProcessedBlock: inscriptionData.lastProcessedBlock
-            };
-            dataCache = cacheData;
-            console.log('Data cached up to block:', inscriptionData.lastProcessedBlock);
+            try {
+                // Convert Map to array for storage
+                const holdersArray = Array.from(inscriptionData.holders.entries());
+                
+                const cacheData = {
+                    totalMinted: inscriptionData.totalMinted,
+                    holders: holdersArray,
+                    mintCount: inscriptionData.mintCount,
+                    lastProcessedBlock: inscriptionData.lastProcessedBlock
+                };
+                
+                localStorage.setItem('mon20_inscription_data', JSON.stringify(cacheData));
+                console.log('Data cached up to block:', inscriptionData.lastProcessedBlock);
+            } catch (e) {
+                console.error('Error saving data to cache:', e);
+            }
         }
 
         async function checkForNewBlocks() {
@@ -788,6 +811,7 @@
                         // Update UI periodically for large ranges
                         if (blockCount > 100 && (end - fromBlock) % 1000 === 0) {
                             updateStats();
+                            saveDataToCache();
                         }
                         
                     } catch (error) {
