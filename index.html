@@ -51,7 +51,7 @@
   </div>
 
   <script>
-    const MONAD_CONFIG = { chainId: 10143, rpcUrl: 'https://testnet-rpc.monad.xyz' };
+    const MONAD_CONFIG = { chainId: 10143, rpcUrl: 'https://rpc-testnet.monadinfra.com' };
     const DEPLOY_BLOCK = 32111409;
     const MAX_SUPPLY = 21000000;
 
@@ -82,8 +82,13 @@
         const block = await web3.eth.getBlock(i, true);
         if (!block || !block.transactions) continue;
         for (const tx of block.transactions) {
-          if (tx.input && tx.input !== '0x' && tx.from && tx.to && tx.from.toLowerCase() === tx.to.toLowerCase()) {
-            processTransaction(tx);
+          try {
+            const fullTx = await web3.eth.getTransaction(tx.hash);
+            if (fullTx && fullTx.input && fullTx.input !== '0x' && fullTx.from && fullTx.to && fullTx.from.toLowerCase() === fullTx.to.toLowerCase()) {
+              processTransaction(fullTx);
+            }
+          } catch (e) {
+            console.warn("Error fetching tx:", tx.hash, e);
           }
         }
         inscriptionData.lastProcessedBlock = i;
