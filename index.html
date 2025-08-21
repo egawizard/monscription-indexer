@@ -1,1033 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MONAD MON-20 Inscription Minter</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #fff;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding: 40px 0;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .header h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .header p {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            margin-bottom: 20px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #4ecdc4;
-            margin-bottom: 10px;
-        }
-
-        .stat-label {
-            font-size: 1rem;
-            opacity: 0.8;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 40px;
-        }
-
-        .user-balance {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            text-align: center;
-        }
-
-        .balance-value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #4ecdc4;
-            margin-bottom: 5px;
-        }
-
-        .balance-label {
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-
-        .mint-section {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 30px;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .mint-section h2 {
-            font-size: 1.8rem;
-            margin-bottom: 20px;
-            color: #4ecdc4;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            font-size: 1rem;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .input-group input::placeholder {
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .btn {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 10px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .holders-section {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 30px;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .holders-section h2 {
-            font-size: 1.8rem;
-            margin-bottom: 20px;
-            color: #4ecdc4;
-        }
-
-        .holder-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            margin-bottom: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .holder-address {
-            font-family: monospace;
-            font-size: 0.9rem;
-        }
-
-        .holder-balance {
-            font-weight: bold;
-            color: #4ecdc4;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            overflow: hidden;
-            margin: 20px 0;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4ecdc4, #44a08d);
-            transition: width 0.5s ease;
-            border-radius: 10px;
-        }
-
-        .network-info {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .network-info h3 {
-            color: #4ecdc4;
-            margin-bottom: 10px;
-        }
-
-        .network-details {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            font-size: 0.9rem;
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 5px;
-        }
-
-        .status-connected {
-            background: #4ecdc4;
-        }
-
-        .status-disconnected {
-            background: #ff6b6b;
-        }
-
-        .footer {
-            text-align: center;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .footer a {
-            color: #4ecdc4;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .footer a:hover {
-            text-decoration: underline;
-        }
-
-        .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 10px;
-            color: white;
-            font-weight: 500;
-            opacity: 0;
-            transform: translateX(100%);
-            transition: all 0.3s ease;
-            z-index: 1000;
-            max-width: 400px;
-        }
-
-        .toast.show {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .toast.success {
-            background: linear-gradient(45deg, #4ecdc4, #44a08d);
-        }
-
-        .toast.error {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-        }
-
-        .toast.warning {
-            background: linear-gradient(45deg, #ffa726, #ff7043);
-        }
-
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .tx-info {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 10px;
-            border-radius: 8px;
-            margin-top: 15px;
-            font-size: 0.85rem;
-            font-family: monospace;
-            word-break: break-all;
-        }
-
-        .indexing-status {
-            background: rgba(255, 165, 0, 0.2);
-            padding: 10px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 165, 0, 0.5);
-            text-align: center;
-            font-size: 0.9rem;
-        }
-
-        .error-message {
-            background: rgba(255, 107, 107, 0.2);
-            padding: 10px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 107, 107, 0.5);
-            text-align: center;
-            font-size: 0.9rem;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-            
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .network-details {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MONAD MON-20 Inscription Minter</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #0e0e16; color: #fff; }
+    .container { max-width: 900px; margin: auto; padding: 20px; }
+    .header { text-align: center; margin-bottom: 30px; }
+    .stats { display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; }
+    .stat { background: #1a1a2b; padding: 20px; border-radius: 12px; text-align: center; flex: 1; }
+    .stat h2 { margin: 0; font-size: 2rem; color: #4ecdc4; }
+    .stat p { margin: 5px 0 0; opacity: 0.8; }
+    .holders { background: #1a1a2b; padding: 20px; border-radius: 12px; margin-top: 20px; }
+    .holder { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .holder:last-child { border-bottom: none; }
+    .progress { margin: 20px 0; background: #333; border-radius: 8px; overflow: hidden; height: 20px; }
+    .progress-fill { background: linear-gradient(90deg,#4ecdc4,#45b7d1); height: 100%; width: 0; transition: width 0.3s ease; }
+    .footer { margin-top: 30px; text-align: center; font-size: 0.9rem; opacity: 0.7; }
+    a { color: #4ecdc4; text-decoration: none; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.8.2/web3.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>MONAD MON-20</h1>
-            <p>The First Inscription Token on MONAD Testnet</p>
-            <div class="status-indicator" id="connectionStatus"></div>
-            <span id="connectionText">Disconnected</span>
-        </div>
-
-        <div id="indexingStatus" class="indexing-status" style="display: none;">
-            <div class="loading" style="width: 16px; height: 16px; margin-right: 10px;"></div>
-            Indexing blockchain data... This may take a moment.
-        </div>
-
-        <div id="errorMessage" class="error-message" style="display: none;"></div>
-
-        <div class="network-info">
-            <h3>Network Information</h3>
-            <div class="network-details">
-                <div><strong>Chain ID:</strong> 10143</div>
-                <div><strong>Network:</strong> MONAD Testnet</div>
-                <div><strong>Ticker:</strong> $MONS</div>
-                <div><strong>Max Supply:</strong> 21,000,000</div>
-                <div><strong>Mint Limit:</strong> 1,000 per mint</div>
-                <div><strong>Deploy Block:</strong> 32,111,409</div>
-            </div>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="totalSupply">0</div>
-                <div class="stat-label">Total Minted</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="remainingSupply">21,000,000</div>
-                <div class="stat-label">Remaining</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalHolders">0</div>
-                <div class="stat-label">Holders</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="mintCount">0</div>
-                <div class="stat-label">Mint Count</div>
-            </div>
-        </div>
-
-        <div class="progress-bar">
-            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-        </div>
-
-        <div class="main-content">
-            <div class="mint-section">
-                <div class="user-balance" id="userBalanceSection" style="display: none;">
-                    <div class="balance-value" id="userBalance">0</div>
-                    <div class="balance-label">Your MONS Balance</div>
-                </div>
-                
-                <h2>Mint MONS Tokens</h2>
-                <div class="input-group">
-                    <label>Amount (Fixed: 1000 MONS)</label>
-                    <input type="text" value="1000" readonly style="opacity: 0.7;">
-                </div>
-                <div class="input-group">
-                    <label>Gas Price (Gwei)</label>
-                    <input type="number" id="gasPrice" value="20" min="1" step="0.1">
-                </div>
-                <button class="btn btn-secondary" onclick="connectWallet()" id="connectBtn">Connect Wallet</button>
-                <button class="btn btn-primary" onclick="mintToken()" id="mintBtn" disabled>Mint 1000 MONS</button>
-                <div style="margin-top: 15px; font-size: 0.9rem; opacity: 0.8;">
-                    <p>⚠️ Only amounts of exactly 1000 MONS are valid</p>
-                    <p>💡 Each mint costs ~0.001 MON in gas</p>
-                </div>
-                <div id="txInfo" class="tx-info" style="display: none;"></div>
-            </div>
-
-            <div class="holders-section">
-                <h2>Top Holders</h2>
-                <div id="holdersList">
-                    <div class="holder-item">
-                        <span class="holder-address">No holders yet</span>
-                        <span class="holder-balance">0 MONS</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="footer">
-            <p>Created by <a href="https://x.com/ega_2ez4crypto" target="_blank">@ega_2ez4crypto</a></p>
-            <p style="margin-top: 10px; font-size: 0.9rem; opacity: 0.7;">
-                Fully decentralized • No database • All data onchain
-            </p>
-        </div>
+  <div class="container">
+    <div class="header">
+      <h1>MONAD MON-20</h1>
+      <p>The First Inscription Token on MONAD Testnet ($MONS)</p>
+      <p id="status">Connecting...</p>
     </div>
 
-    <div class="toast" id="toast"></div>
+    <div class="stats">
+      <div class="stat"><h2 id="totalMinted">0</h2><p>Total Minted</p></div>
+      <div class="stat"><h2 id="remaining">21,000,000</h2><p>Remaining</p></div>
+      <div class="stat"><h2 id="holders">0</h2><p>Holders</p></div>
+      <div class="stat"><h2 id="mintCount">0</h2><p>Mint Count</p></div>
+    </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.8.2/web3.min.js"></script>
-    <script>
-        // MONAD Testnet configuration
-        const MONAD_CONFIG = {
-            chainId: 10143,
-            chainName: 'MONAD Testnet',
-            rpcUrl: 'https://testnet-rpc.monad.xyz',
-            nativeCurrency: {
-                name: 'MON',
-                symbol: 'MON',
-                decimals: 18
-            },
-            blockExplorer: 'https://testnet-explorer.monad.xyz'
-        };
+    <div class="progress"><div id="progressFill" class="progress-fill"></div></div>
 
-        const DEPLOY_BLOCK = 32111409;
-        const TOKEN_TICKER = 'MONS';
-        const MAX_SUPPLY = 21000000;
-        const MINT_LIMIT = 1000;
+    <div class="holders">
+      <h3>Top Holders</h3>
+      <div id="holdersList"><div class="holder"><span>No holders yet</span><span>0 MONS</span></div></div>
+    </div>
 
-        let web3;
-        let userAccount = null;
-        let isConnected = false;
-        let currentBlockNumber = 0;
-        let isIndexing = false;
-        let indexingComplete = false;
-        let inscriptionData = {
-            totalMinted: 0,
-            holders: new Map(),
-            mintCount: 0,
-            lastProcessedBlock: DEPLOY_BLOCK - 1
-        };
+    <div class="footer">
+      Created by <a href="https://x.com/ega_2ez4crypto" target="_blank">@ega_2ez4crypto</a><br>
+      Fully decentralized • No database • All data onchain
+    </div>
+  </div>
 
-        // Initialize Web3 connection
-        async function initWeb3() {
-            try {
-                if (window.ethereum) {
-                    web3 = new Web3(window.ethereum);
-                } else {
-                    web3 = new Web3(MONAD_CONFIG.rpcUrl);
-                    showToast('MetaMask not detected. Using read-only mode.', 'warning');
-                }
-                
-                console.log('Connecting to MONAD testnet...');
-                
-                // Test connection
-                try {
-                    currentBlockNumber = await web3.eth.getBlockNumber();
-                    console.log('Connected! Current block:', currentBlockNumber);
-                } catch (error) {
-                    throw new Error('Failed to connect to MONAD RPC: ' + error.message);
-                }
+  <script>
+    const MONAD_CONFIG = { chainId: 10143, rpcUrl: 'https://testnet-rpc.monad.xyz' };
+    const DEPLOY_BLOCK = 32111409;
+    const MAX_SUPPLY = 21000000;
 
-                // Load cached data from localStorage if available
-                loadCachedData();
-                
-                // Show cached data immediately
-                updateStats();
-                
-                // Then check for new blocks and index only new ones
-                await checkForNewBlocks();
-                
-            } catch (error) {
-                console.error('Failed to initialize Web3:', error);
-                showError('Failed to connect to MONAD network: ' + error.message);
-                // Show cached data or defaults
-                updateStats();
-            }
+    let web3;
+    let inscriptionData = { totalMinted: 0, holders: new Map(), mintCount: 0, lastProcessedBlock: DEPLOY_BLOCK - 1 };
+
+    async function initWeb3() {
+      web3 = new Web3(MONAD_CONFIG.rpcUrl);
+      try {
+        const currentBlock = await web3.eth.getBlockNumber();
+        document.getElementById('status').innerText = `Connected • Block: ${currentBlock}`;
+        if (inscriptionData.lastProcessedBlock < currentBlock) {
+          await indexNewBlocks(inscriptionData.lastProcessedBlock + 1, currentBlock);
         }
-
-        function loadCachedData() {
-            try {
-                const cachedData = localStorage.getItem('mon20_inscription_data');
-                if (cachedData) {
-                    const parsedData = JSON.parse(cachedData);
-                    
-                    // Convert holders array back to Map
-                    const holdersMap = new Map();
-                    if (parsedData.holders && Array.isArray(parsedData.holders)) {
-                        parsedData.holders.forEach(([address, balance]) => {
-                            holdersMap.set(address, balance);
-                        });
-                    }
-                    
-                    inscriptionData = {
-                        totalMinted: parsedData.totalMinted || 0,
-                        holders: holdersMap,
-                        mintCount: parsedData.mintCount || 0,
-                        lastProcessedBlock: parsedData.lastProcessedBlock || (DEPLOY_BLOCK - 1)
-                    };
-                    
-                    console.log('Loaded cached data:', {
-                        totalMinted: inscriptionData.totalMinted,
-                        holders: inscriptionData.holders.size,
-                        lastProcessedBlock: inscriptionData.lastProcessedBlock
-                    });
-                }
-            } catch (e) {
-                console.error('Error loading cached data:', e);
-            }
-        }
-
-        function saveDataToCache() {
-            try {
-                // Convert Map to array for storage
-                const holdersArray = Array.from(inscriptionData.holders.entries());
-                
-                const cacheData = {
-                    totalMinted: inscriptionData.totalMinted,
-                    holders: holdersArray,
-                    mintCount: inscriptionData.mintCount,
-                    lastProcessedBlock: inscriptionData.lastProcessedBlock
-                };
-                
-                localStorage.setItem('mon20_inscription_data', JSON.stringify(cacheData));
-                console.log('Data cached up to block:', inscriptionData.lastProcessedBlock);
-            } catch (e) {
-                console.error('Error saving data to cache:', e);
-            }
-        }
-
-        async function checkForNewBlocks() {
-            if (isIndexing) return;
-            
-            try {
-                const newBlockNumber = await web3.eth.getBlockNumber();
-                const lastProcessed = inscriptionData.lastProcessedBlock;
-                
-                if (newBlockNumber > lastProcessed) {
-                    console.log(`New blocks detected: ${lastProcessed} -> ${newBlockNumber}`);
-                    currentBlockNumber = newBlockNumber;
-                    
-                    // Only index new blocks since last processed
-                    await indexNewBlocks(lastProcessed + 1, newBlockNumber);
-                } else {
-                    console.log('No new blocks to process');
-                }
-            } catch (error) {
-                console.error('Error checking for new blocks:', error);
-            }
-        }
-
-        async function connectWallet() {
-            if (typeof window.ethereum === 'undefined') {
-                showToast('Please install MetaMask or another Web3 wallet', 'error');
-                return;
-            }
-
-            try {
-                // Request account access
-                await window.ethereum.request({ method: 'eth_requestAccounts' });
-                
-                // Check if we're on the correct network
-                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-                const targetChainId = `0x${MONAD_CONFIG.chainId.toString(16)}`;
-                
-                if (chainId !== targetChainId) {
-                    try {
-                        await window.ethereum.request({
-                            method: 'wallet_switchEthereumChain',
-                            params: [{ chainId: targetChainId }],
-                        });
-                    } catch (switchError) {
-                        // Chain doesn't exist, add it
-                        if (switchError.code === 4902) {
-                            await window.ethereum.request({
-                                method: 'wallet_addEthereumChain',
-                                params: [{
-                                    chainId: targetChainId,
-                                    chainName: MONAD_CONFIG.chainName,
-                                    nativeCurrency: MONAD_CONFIG.nativeCurrency,
-                                    rpcUrls: [MONAD_CONFIG.rpcUrl],
-                                    blockExplorerUrls: [MONAD_CONFIG.blockExplorer]
-                                }]
-                            });
-                        } else {
-                            throw switchError;
-                        }
-                    }
-                }
-
-                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                userAccount = accounts[0].toLowerCase();
-                isConnected = true;
-                
-                updateConnectionStatus();
-                updateUserBalance();
-                document.getElementById('mintBtn').disabled = false;
-                document.getElementById('connectBtn').textContent = `${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`;
-                showToast('Wallet connected successfully!', 'success');
-                
-            } catch (error) {
-                console.error('Error connecting wallet:', error);
-                showToast('Failed to connect wallet: ' + error.message, 'error');
-            }
-        }
-
-        async function mintToken() {
-            if (!isConnected) {
-                showToast('Please connect your wallet first', 'error');
-                return;
-            }
-
-            const mintBtn = document.getElementById('mintBtn');
-            const originalText = mintBtn.textContent;
-            mintBtn.disabled = true;
-            mintBtn.innerHTML = '<div class="loading"></div> Minting...';
-
-            try {
-                const gasPrice = document.getElementById('gasPrice').value;
-                
-                // Create the inscription data - case sensitive!
-                const inscriptionJson = JSON.stringify({
-                    "p": "mon-20",
-                    "op": "mint",
-                    "tick": "MONS",
-                    "amt": "1000"
-                });
-
-                // Convert to hex
-                const dataHex = '0x' + Array.from(new TextEncoder().encode(inscriptionJson))
-                    .map(b => b.toString(16).padStart(2, '0'))
-                    .join('');
-
-                console.log('Inscription data:', inscriptionJson);
-                console.log('Data hex:', dataHex);
-
-                // Estimate gas
-                const gasEstimate = await web3.eth.estimateGas({
-                    from: userAccount,
-                    to: userAccount,
-                    value: '0x0',
-                    data: dataHex
-                });
-
-                const tx = {
-                    from: userAccount,
-                    to: userAccount,
-                    value: '0x0',
-                    data: dataHex,
-                    gas: '0x' + Math.round(gasEstimate * 1.2).toString(16), // 20% buffer
-                    gasPrice: web3.utils.toWei(gasPrice, 'gwei')
-                };
-
-                console.log('Transaction:', tx);
-
-                const txHash = await window.ethereum.request({
-                    method: 'eth_sendTransaction',
-                    params: [tx],
-                });
-
-                showToast(`Mint transaction sent! Hash: ${txHash}`, 'success');
-                
-                // Show transaction info
-                const txInfo = document.getElementById('txInfo');
-                txInfo.style.display = 'block';
-                txInfo.innerHTML = `
-                    <div><strong>Transaction Hash:</strong></div>
-                    <div>${txHash}</div>
-                    <div style="margin-top: 10px;"><strong>Inscription Data:</strong></div>
-                    <div>${inscriptionJson}</div>
-                `;
-
-                // Wait for confirmation and re-index
-                setTimeout(async () => {
-                    showToast('Refreshing inscription data...', 'success');
-                    await refreshData();
-                }, 15000);
-                
-            } catch (error) {
-                console.error('Error minting:', error);
-                showToast('Mint transaction failed: ' + error.message, 'error');
-            } finally {
-                mintBtn.disabled = false;
-                mintBtn.textContent = originalText;
-            }
-        }
-
-        async function indexNewBlocks(fromBlock, toBlock) {
-            if (isIndexing) {
-                console.log('Indexing already in progress, skipping...');
-                return;
-            }
-            
-            isIndexing = true;
-            const blockCount = toBlock - fromBlock + 1;
-            
-            // Only show indexing status for large ranges
-            if (blockCount > 100) {
-                showIndexingStatus(true);
-                console.log(`Indexing ${blockCount} new blocks from ${fromBlock} to ${toBlock}...`);
-            } else {
-                console.log(`Scanning ${blockCount} recent blocks...`);
-            }
-            
-            try {
-                let newMintsFound = 0;
-                
-                // Process in smaller chunks for better UX
-                const CHUNK_SIZE = blockCount > 1000 ? 500 : 100;
-                
-                for (let start = fromBlock; start <= toBlock; start += CHUNK_SIZE) {
-                    const end = Math.min(start + CHUNK_SIZE - 1, toBlock);
-                    
-                    try {
-                        for (let blockNum = start; blockNum <= end; blockNum++) {
-                            const block = await web3.eth.getBlock(blockNum, true);
-                            if (block && block.transactions) {
-                                for (const tx of block.transactions) {
-                                    if (tx.input && tx.input !== '0x' && tx.from && tx.to && 
-                                        tx.from.toLowerCase() === tx.to.toLowerCase()) {
-                                        const wasValidMint = await processTransaction(tx);
-                                        if (wasValidMint) {
-                                            newMintsFound++;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        inscriptionData.lastProcessedBlock = end;
-                        
-                        // Update UI periodically for large ranges
-                        if (blockCount > 100 && (end - fromBlock) % 1000 === 0) {
-                            updateStats();
-                            saveDataToCache();
-                        }
-                        
-                    } catch (error) {
-                        console.warn(`Error processing chunk ${start}-${end}:`, error);
-                        continue;
-                    }
-                }
-
-                // Save to cache after successful indexing
-                saveDataToCache();
-                
-                if (newMintsFound > 0) {
-                    console.log(`Found ${newMintsFound} new mints in ${blockCount} blocks`);
-                    showToast(`${newMintsFound} new mint(s) discovered!`, 'success');
-                } else if (blockCount > 100) {
-                    console.log(`No new mints found in ${blockCount} blocks`);
-                }
-                
-                updateStats();
-                indexingComplete = true;
-                
-            } catch (error) {
-                console.error('Error indexing new blocks:', error);
-                showError('Error loading new inscription data: ' + error.message);
-            } finally {
-                isIndexing = false;
-                showIndexingStatus(false);
-            }
-        }
-
-        async function processTransaction(tx) {
-            try {
-                if (!tx.input || tx.input === '0x') return false;
-
-                // Decode hex data
-                const hexData = tx.input.slice(2);
-                let decodedData = '';
-                
-                try {
-                    // Convert hex to string
-                    for (let i = 0; i < hexData.length; i += 2) {
-                        const hexCode = hexData.substr(i, 2);
-                        if (hexCode) {
-                            decodedData += String.fromCharCode(parseInt(hexCode, 16));
-                        }
-                    }
-                } catch (e) {
-                    return false; // Skip invalid hex
-                }
-                
-                try {
-                    const jsonData = JSON.parse(decodedData);
-                    
-                    // Check if it's a valid MON-20 mint (case insensitive for p and op, case sensitive for tick)
-                    if ((jsonData.p === 'mon-20' || jsonData.p === 'MON-20') && 
-                        (jsonData.op === 'mint' || jsonData.op === 'MINT') && 
-                        jsonData.tick === 'MONS' && 
-                        jsonData.amt === '1000') {
-                        
-                        // Valid mint found
-                        inscriptionData.totalMinted += 1000;
-                        inscriptionData.mintCount++;
-                        
-                        // Update holder balance
-                        const holderAddress = tx.from.toLowerCase();
-                        const currentBalance = inscriptionData.holders.get(holderAddress) || 0;
-                        inscriptionData.holders.set(holderAddress, currentBalance + 1000);
-                        
-                        console.log(`Valid mint found: ${tx.from} minted 1000 MONS (tx: ${tx.hash})`);
-                        return true;
-                    }
-                } catch (e) {
-                    // Not valid JSON, ignore silently
-                }
-                
-                return false;
-            } catch (error) {
-                console.warn('Error processing transaction:', tx.hash, error);
-                return false;
-            }
-        }
-
-        function updateStats() {
-            const totalMinted = inscriptionData.totalMinted;
-            const remaining = Math.max(0, MAX_SUPPLY - totalMinted);
-            const progress = Math.min((totalMinted / MAX_SUPPLY) * 100, 100);
-            const holdersCount = inscriptionData.holders.size;
-
-            // Update main stats
-            document.getElementById('totalSupply').textContent = totalMinted.toLocaleString();
-            document.getElementById('remainingSupply').textContent = remaining.toLocaleString();
-            document.getElementById('totalHolders').textContent = holdersCount.toLocaleString();
-            document.getElementById('mintCount').textContent = inscriptionData.mintCount.toLocaleString();
-            document.getElementById('progressFill').style.width = progress + '%';
-
-            // Update user balance if connected
-            updateUserBalance();
-            updateHolders();
-        }
-
-        function updateUserBalance() {
-            const balanceSection = document.getElementById('userBalanceSection');
-            const balanceElement = document.getElementById('userBalance');
-            
-            if (isConnected && userAccount) {
-                const userBalance = inscriptionData.holders.get(userAccount.toLowerCase()) || 0;
-                balanceElement.textContent = userBalance.toLocaleString();
-                balanceSection.style.display = 'block';
-            } else {
-                balanceSection.style.display = 'none';
-            }
-        }
-
-        function updateHolders() {
-            const holdersList = document.getElementById('holdersList');
-            holdersList.innerHTML = '';
-
-            // Sort holders by balance
-            const sortedHolders = Array.from(inscriptionData.holders.entries())
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 10); // Top 10
-
-            if (sortedHolders.length === 0) {
-                holdersList.innerHTML = '<div class="holder-item"><span class="holder-address">No holders yet</span><span class="holder-balance">0 MONS</span></div>';
-                return;
-            }
-
-            sortedHolders.forEach(([address, balance], index) => {
-                const holderItem = document.createElement('div');
-                holderItem.className = 'holder-item';
-                holderItem.innerHTML = `
-                    <span class="holder-address">#${index + 1} ${address.slice(0, 8)}...${address.slice(-6)}</span>
-                    <span class="holder-balance">${balance.toLocaleString()} MONS</span>
-                `;
-                holdersList.appendChild(holderItem);
-            });
-        }
-
-        function updateConnectionStatus() {
-            const statusIndicator = document.getElementById('connectionStatus');
-            const statusText = document.getElementById('connectionText');
-            
-            if (isConnected) {
-                statusIndicator.className = 'status-indicator status-connected';
-                statusText.textContent = `Connected: ${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`;
-            } else {
-                statusIndicator.className = 'status-indicator status-disconnected';
-                statusText.textContent = 'Not Connected';
-            }
-        }
-
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = `toast ${type}`;
-            
-            setTimeout(() => toast.classList.add('show'), 100);
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.className = 'toast', 300);
-            }, 5000);
-        }
-
-        function showIndexingStatus(show) {
-            const indexingStatus = document.getElementById('indexingStatus');
-            indexingStatus.style.display = show ? 'block' : 'none';
-        }
-
-        function showError(message) {
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
-            
-            setTimeout(() => {
-                errorMessage.style.display = 'none';
-            }, 10000);
-        }
-
-        async function refreshData() {
-            await checkForNewBlocks();
-        }
-
-        // Auto-refresh data every 30 seconds (faster for better UX)
         setInterval(async () => {
-            if (web3 && !isIndexing) {
-                await refreshData();
-            }
+          const latest = await web3.eth.getBlockNumber();
+          if (latest > inscriptionData.lastProcessedBlock) {
+            await indexNewBlocks(inscriptionData.lastProcessedBlock + 1, latest);
+          }
         }, 30000);
+      } catch (err) {
+        document.getElementById('status').innerText = 'Failed: ' + err.message;
+      }
+    }
 
-        // Initialize when page loads
-        window.addEventListener('load', async () => {
-            await initWeb3();
-            updateConnectionStatus();
-        });
-
-        // Handle account changes
-        if (window.ethereum) {
-            window.ethereum.on('accountsChanged', (accounts) => {
-                if (accounts.length === 0) {
-                    isConnected = false;
-                    userAccount = null;
-                    document.getElementById('mintBtn').disabled = true;
-                    document.getElementById('connectBtn').textContent = 'Connect Wallet';
-                    document.getElementById('userBalanceSection').style.display = 'none';
-                } else {
-                    userAccount = accounts[0].toLowerCase();
-                    document.getElementById('connectBtn').textContent = `${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`;
-                    updateUserBalance();
-                }
-                updateConnectionStatus();
-            });
-
-            window.ethereum.on('chainChanged', (chainId) => {
-                window.location.reload();
-            });
+    async function indexNewBlocks(fromBlock, toBlock) {
+      for (let i = fromBlock; i <= toBlock; i++) {
+        const block = await web3.eth.getBlock(i, true);
+        if (!block || !block.transactions) continue;
+        for (const tx of block.transactions) {
+          if (tx.input && tx.input !== '0x' && tx.from && tx.to && tx.from.toLowerCase() === tx.to.toLowerCase()) {
+            processTransaction(tx);
+          }
         }
-    </script>
+        inscriptionData.lastProcessedBlock = i;
+      }
+      updateStats();
+    }
+
+    function processTransaction(tx) {
+      try {
+        const hexData = tx.input.slice(2);
+        let decoded = '';
+        for (let i = 0; i < hexData.length; i += 2) decoded += String.fromCharCode(parseInt(hexData.substr(i, 2), 16));
+        const data = JSON.parse(decoded);
+        if ((data.p === 'mon-20' || data.p === 'MON-20') && (data.op === 'mint' || data.op === 'MINT') && data.tick === 'MONS' && data.amt === '1000') {
+          inscriptionData.totalMinted += 1000;
+          inscriptionData.mintCount++;
+          const addr = tx.from.toLowerCase();
+          const bal = inscriptionData.holders.get(addr) || 0;
+          inscriptionData.holders.set(addr, bal + 1000);
+        }
+      } catch (e) { return; }
+    }
+
+    function updateStats() {
+      const minted = inscriptionData.totalMinted;
+      const remaining = Math.max(0, MAX_SUPPLY - minted);
+      const holders = inscriptionData.holders.size;
+      const mints = inscriptionData.mintCount;
+      const progress = Math.min((minted / MAX_SUPPLY) * 100, 100);
+
+      document.getElementById('totalMinted').innerText = minted.toLocaleString();
+      document.getElementById('remaining').innerText = remaining.toLocaleString();
+      document.getElementById('holders').innerText = holders;
+      document.getElementById('mintCount').innerText = mints;
+      document.getElementById('progressFill').style.width = progress + '%';
+
+      const holdersList = document.getElementById('holdersList');
+      holdersList.innerHTML = '';
+      const sorted = Array.from(inscriptionData.holders.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      if (sorted.length === 0) {
+        holdersList.innerHTML = '<div class="holder"><span>No holders yet</span><span>0 MONS</span></div>';
+        return;
+      }
+      sorted.forEach(([addr, bal], idx) => {
+        holdersList.innerHTML += `<div class="holder"><span>#${idx+1} ${addr.slice(0,8)}...${addr.slice(-6)}</span><span>${bal.toLocaleString()} MONS</span></div>`;
+      });
+    }
+
+    window.addEventListener('load', initWeb3);
+  </script>
 </body>
 </html>
