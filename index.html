@@ -153,6 +153,12 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .btn-secondary {
             background: rgba(255, 255, 255, 0.1);
             color: white;
@@ -282,6 +288,7 @@
             transform: translateX(100%);
             transition: all 0.3s ease;
             z-index: 1000;
+            max-width: 400px;
         }
 
         .toast.show {
@@ -295,6 +302,30 @@
 
         .toast.error {
             background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .tx-info {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.85rem;
+            font-family: monospace;
+            word-break: break-all;
         }
 
         @media (max-width: 768px) {
@@ -318,7 +349,7 @@
             <h1>MONAD MON-20</h1>
             <p>The First Inscription Token on MONAD Testnet</p>
             <div class="status-indicator" id="connectionStatus"></div>
-            <span id="connectionText">Connecting...</span>
+            <span id="connectionText">Disconnected</span>
         </div>
 
         <div class="network-info">
@@ -335,19 +366,27 @@
 
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-value" id="totalSupply">0</div>
+                <div class="stat-value" id="totalSupply">
+                    <div class="loading"></div>
+                </div>
                 <div class="stat-label">Total Minted</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="remainingSupply">21,000,000</div>
+                <div class="stat-value" id="remainingSupply">
+                    <div class="loading"></div>
+                </div>
                 <div class="stat-label">Remaining</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="totalHolders">0</div>
+                <div class="stat-value" id="totalHolders">
+                    <div class="loading"></div>
+                </div>
                 <div class="stat-label">Holders</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="mintCount">0</div>
+                <div class="stat-value" id="mintCount">
+                    <div class="loading"></div>
+                </div>
                 <div class="stat-label">Mint Count</div>
             </div>
         </div>
@@ -365,21 +404,24 @@
                 </div>
                 <div class="input-group">
                     <label>Gas Price (Gwei)</label>
-                    <input type="number" id="gasPrice" value="20" min="1">
+                    <input type="number" id="gasPrice" value="20" min="1" step="0.1">
                 </div>
-                <button class="btn btn-secondary" onclick="connectWallet()">Connect Wallet</button>
+                <button class="btn btn-secondary" onclick="connectWallet()" id="connectBtn">Connect Wallet</button>
                 <button class="btn btn-primary" onclick="mintToken()" id="mintBtn" disabled>Mint 1000 MONS</button>
                 <div style="margin-top: 15px; font-size: 0.9rem; opacity: 0.8;">
                     <p>⚠️ Only amounts of exactly 1000 MONS are valid</p>
-                    <p>💡 Each mint costs ~0.001 ETH in gas</p>
+                    <p>💡 Each mint costs ~0.001 MON in gas</p>
                 </div>
+                <div id="txInfo" class="tx-info" style="display: none;"></div>
             </div>
 
             <div class="holders-section">
                 <h2>Top Holders</h2>
                 <div id="holdersList">
                     <div class="holder-item">
-                        <span class="holder-address">Loading holders...</span>
+                        <span class="holder-address">
+                            <div class="loading"></div> Loading holders...
+                        </span>
                         <span class="holder-balance">-</span>
                     </div>
                 </div>
@@ -397,47 +439,76 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // Contract ABI for ERC-20 like functions
-        const web3 = new (window.Web3 || window.ethereum?.web3?.constructor)('https://testnet-rpc.monad.xyz');
-        
+        // MONAD Testnet configuration
+        const MONAD_CONFIG = {
+            chainId: 10143,
+            chainName: 'MONAD Testnet',
+            rpcUrl: 'https://testnet-rpc.monad.xyz',
+            nativeCurrency: {
+                name: 'MON',
+                symbol: 'MON',
+                decimals: 18
+            },
+            blockExplorer: 'https://testnet-explorer.monad.xyz'
+        };
+
+        const DEPLOY_BLOCK = 32111409;
+        const TOKEN_TICKER = 'MONS';
+        const MAX_SUPPLY = 21000000;
+        const MINT_LIMIT = 1000;
+
+        let web3;
         let userAccount = null;
         let isConnected = false;
-
-        // MONAD Testnet configuration
-        const CHAIN_ID = 10143;
-        const RPC_URL = 'https://testnet-rpc.monad.xyz';
-        const DEPLOY_BLOCK = 32111409;
-
-        // MON-20 Token configuration
-        const TOKEN_CONFIG = {
-            p: "MON-20",
-            tick: "MONS",
-            max: "21000000",
-            lim: "1000"
+        let currentBlockNumber = 0;
+        let inscriptionData = {
+            totalMinted: 0,
+            holders: new Map(),
+            mintCount: 0
         };
 
-        // Mock data for demonstration
-        let mockData = {
-            totalMinted: 156000,
-            holders: [
-                { address: '0x742d35Cc6dB3a45BC8E87B4B8e7bE1234567890a', balance: 25000 },
-                { address: '0x8ba1f109551bD432803012645Hc967890123456b', balance: 18000 },
-                { address: '0x1dF62f291b2E409321fDbD8043e6c74567890123', balance: 15000 },
-                { address: '0x9fB1c33F8bE4B4A1234567890123456789012345', balance: 12000 },
-                { address: '0x4eA52b4567890123456789012345678901234567', balance: 10000 }
-            ]
-        };
+        // Initialize Web3 connection
+        async function initWeb3() {
+            try {
+                if (window.ethereum) {
+                    web3 = new Web3(window.ethereum);
+                } else {
+                    web3 = new Web3(MONAD_CONFIG.rpcUrl);
+                    showToast('MetaMask not detected. Using read-only mode.', 'error');
+                }
+                
+                // Get current block number
+                currentBlockNumber = await web3.eth.getBlockNumber();
+                console.log('Current block:', currentBlockNumber);
+                
+                // Start indexing inscriptions
+                await indexInscriptions();
+                
+            } catch (error) {
+                console.error('Failed to initialize Web3:', error);
+                showToast('Failed to connect to MONAD network', 'error');
+            }
+        }
 
         async function connectWallet() {
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    
-                    // Switch to MONAD Testnet
+            if (typeof window.ethereum === 'undefined') {
+                showToast('Please install MetaMask or another Web3 wallet', 'error');
+                return;
+            }
+
+            try {
+                // Request account access
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                
+                // Check if we're on the correct network
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                const targetChainId = `0x${MONAD_CONFIG.chainId.toString(16)}`;
+                
+                if (chainId !== targetChainId) {
                     try {
                         await window.ethereum.request({
                             method: 'wallet_switchEthereumChain',
-                            params: [{ chainId: `0x${CHAIN_ID.toString(16)}` }],
+                            params: [{ chainId: targetChainId }],
                         });
                     } catch (switchError) {
                         // Chain doesn't exist, add it
@@ -445,34 +516,31 @@
                             await window.ethereum.request({
                                 method: 'wallet_addEthereumChain',
                                 params: [{
-                                    chainId: `0x${CHAIN_ID.toString(16)}`,
-                                    chainName: 'MONAD Testnet',
-                                    nativeCurrency: {
-                                        name: 'ETH',
-                                        symbol: 'ETH',
-                                        decimals: 18
-                                    },
-                                    rpcUrls: [RPC_URL],
-                                    blockExplorerUrls: ['https://testnet-explorer.monad.xyz']
+                                    chainId: targetChainId,
+                                    chainName: MONAD_CONFIG.chainName,
+                                    nativeCurrency: MONAD_CONFIG.nativeCurrency,
+                                    rpcUrls: [MONAD_CONFIG.rpcUrl],
+                                    blockExplorerUrls: [MONAD_CONFIG.blockExplorer]
                                 }]
                             });
+                        } else {
+                            throw switchError;
                         }
                     }
-
-                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                    userAccount = accounts[0];
-                    isConnected = true;
-                    
-                    updateConnectionStatus();
-                    document.getElementById('mintBtn').disabled = false;
-                    showToast('Wallet connected successfully!', 'success');
-                    
-                } catch (error) {
-                    console.error('Error connecting wallet:', error);
-                    showToast('Failed to connect wallet', 'error');
                 }
-            } else {
-                showToast('Please install MetaMask or another Web3 wallet', 'error');
+
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                userAccount = accounts[0];
+                isConnected = true;
+                
+                updateConnectionStatus();
+                document.getElementById('mintBtn').disabled = false;
+                document.getElementById('connectBtn').textContent = `${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`;
+                showToast('Wallet connected successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+                showToast('Failed to connect wallet: ' + error.message, 'error');
             }
         }
 
@@ -482,72 +550,182 @@
                 return;
             }
 
-            const gasPrice = document.getElementById('gasPrice').value;
-            
-            // Create the inscription data
-            const inscriptionData = JSON.stringify({
-                "p": "mon-20",
-                "op": "mint",
-                "tick": "MONS",
-                "amt": "1000"
-            });
+            const mintBtn = document.getElementById('mintBtn');
+            const originalText = mintBtn.textContent;
+            mintBtn.disabled = true;
+            mintBtn.innerHTML = '<div class="loading"></div> Minting...';
 
             try {
-                // Convert inscription data to hex
-                const dataHex = '0x' + Array.from(new TextEncoder().encode(inscriptionData))
+                const gasPrice = document.getElementById('gasPrice').value;
+                
+                // Create the inscription data
+                const inscriptionJson = JSON.stringify({
+                    "p": "mon-20",
+                    "op": "mint",
+                    "tick": "MONS",
+                    "amt": "1000"
+                });
+
+                // Convert to hex
+                const dataHex = '0x' + Array.from(new TextEncoder().encode(inscriptionJson))
                     .map(b => b.toString(16).padStart(2, '0'))
                     .join('');
 
+                console.log('Inscription data:', inscriptionJson);
+                console.log('Data hex:', dataHex);
+
+                // Estimate gas
+                const gasEstimate = await web3.eth.estimateGas({
+                    from: userAccount,
+                    to: userAccount,
+                    value: '0x0',
+                    data: dataHex
+                });
+
                 const tx = {
                     from: userAccount,
-                    to: userAccount, // Self-transfer
-                    value: '0x0', // 0 ETH transfer
+                    to: userAccount,
+                    value: '0x0',
                     data: dataHex,
-                    gasPrice: web3.utils.toWei(gasPrice, 'gwei'),
-                    gas: '0x5208' // 21000 gas
+                    gas: '0x' + Math.round(gasEstimate * 1.2).toString(16), // 20% buffer
+                    gasPrice: web3.utils.toWei(gasPrice, 'gwei')
                 };
+
+                console.log('Transaction:', tx);
 
                 const txHash = await window.ethereum.request({
                     method: 'eth_sendTransaction',
                     params: [tx],
                 });
 
-                showToast(`Mint transaction sent! Hash: ${txHash.slice(0, 10)}...`, 'success');
+                showToast(`Mint transaction sent! Hash: ${txHash}`, 'success');
                 
-                // Update mock data
-                mockData.totalMinted += 1000;
-                updateStats();
+                // Show transaction info
+                const txInfo = document.getElementById('txInfo');
+                txInfo.style.display = 'block';
+                txInfo.innerHTML = `
+                    <div><strong>Transaction Hash:</strong></div>
+                    <div>${txHash}</div>
+                    <div style="margin-top: 10px;"><strong>Inscription Data:</strong></div>
+                    <div>${inscriptionJson}</div>
+                `;
+
+                // Wait for confirmation and re-index
+                setTimeout(async () => {
+                    await indexInscriptions();
+                }, 15000); // Wait 15 seconds for block confirmation
                 
             } catch (error) {
                 console.error('Error minting:', error);
-                showToast('Mint transaction failed', 'error');
+                showToast('Mint transaction failed: ' + error.message, 'error');
+            } finally {
+                mintBtn.disabled = false;
+                mintBtn.textContent = originalText;
             }
         }
 
-        function updateConnectionStatus() {
-            const statusIndicator = document.getElementById('connectionStatus');
-            const statusText = document.getElementById('connectionText');
-            
-            if (isConnected) {
-                statusIndicator.className = 'status-indicator status-connected';
-                statusText.textContent = `Connected: ${userAccount ? userAccount.slice(0, 6) + '...' + userAccount.slice(-4) : ''}`;
-            } else {
-                statusIndicator.className = 'status-indicator status-disconnected';
-                statusText.textContent = 'Not Connected';
+        async function indexInscriptions() {
+            try {
+                console.log('Starting inscription indexing...');
+                
+                // Reset data
+                inscriptionData = {
+                    totalMinted: 0,
+                    holders: new Map(),
+                    mintCount: 0
+                };
+
+                const fromBlock = DEPLOY_BLOCK;
+                const toBlock = Math.min(fromBlock + 10000, currentBlockNumber); // Process in chunks
+                
+                console.log(`Indexing from block ${fromBlock} to ${toBlock}`);
+
+                // Get all transactions from deploy block
+                for (let blockNum = fromBlock; blockNum <= toBlock; blockNum += 100) {
+                    const endBlock = Math.min(blockNum + 99, toBlock);
+                    console.log(`Processing blocks ${blockNum} to ${endBlock}`);
+                    
+                    try {
+                        const logs = await web3.eth.getPastLogs({
+                            fromBlock: blockNum,
+                            toBlock: endBlock
+                        });
+
+                        // Process each transaction that might contain inscription data
+                        for (const log of logs) {
+                            await processTransaction(log.transactionHash);
+                        }
+                    } catch (error) {
+                        console.warn(`Error processing block range ${blockNum}-${endBlock}:`, error);
+                    }
+                }
+
+                updateStats();
+                console.log('Inscription indexing completed');
+                
+            } catch (error) {
+                console.error('Error indexing inscriptions:', error);
+                showToast('Error loading inscription data', 'error');
             }
+        }
+
+        async function processTransaction(txHash) {
+            try {
+                const tx = await web3.eth.getTransaction(txHash);
+                if (!tx || !tx.input || tx.input === '0x') return;
+
+                // Decode hex data
+                const hexData = tx.input.slice(2);
+                const decodedData = hexToString(hexData);
+                
+                try {
+                    const jsonData = JSON.parse(decodedData);
+                    
+                    // Check if it's a valid MON-20 mint
+                    if (jsonData.p === 'mon-20' && 
+                        jsonData.op === 'mint' && 
+                        jsonData.tick === 'MONS' && 
+                        jsonData.amt === '1000') {
+                        
+                        // Valid mint found
+                        inscriptionData.totalMinted += 1000;
+                        inscriptionData.mintCount++;
+                        
+                        // Update holder balance
+                        const currentBalance = inscriptionData.holders.get(tx.from) || 0;
+                        inscriptionData.holders.set(tx.from, currentBalance + 1000);
+                        
+                        console.log(`Valid mint found: ${tx.from} minted 1000 MONS`);
+                    }
+                } catch (e) {
+                    // Not valid JSON, ignore
+                }
+                
+            } catch (error) {
+                console.warn('Error processing transaction:', txHash, error);
+            }
+        }
+
+        function hexToString(hex) {
+            let str = '';
+            for (let i = 0; i < hex.length; i += 2) {
+                const hexCode = hex.substr(i, 2);
+                str += String.fromCharCode(parseInt(hexCode, 16));
+            }
+            return str;
         }
 
         function updateStats() {
-            const totalMinted = mockData.totalMinted;
-            const maxSupply = 21000000;
-            const remaining = maxSupply - totalMinted;
-            const progress = (totalMinted / maxSupply) * 100;
+            const totalMinted = inscriptionData.totalMinted;
+            const remaining = MAX_SUPPLY - totalMinted;
+            const progress = (totalMinted / MAX_SUPPLY) * 100;
+            const holdersCount = inscriptionData.holders.size;
 
             document.getElementById('totalSupply').textContent = totalMinted.toLocaleString();
             document.getElementById('remainingSupply').textContent = remaining.toLocaleString();
-            document.getElementById('totalHolders').textContent = mockData.holders.length;
-            document.getElementById('mintCount').textContent = Math.floor(totalMinted / 1000);
-            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('totalHolders').textContent = holdersCount;
+            document.getElementById('mintCount').textContent = inscriptionData.mintCount;
+            document.getElementById('progressFill').style.width = Math.min(progress, 100) + '%';
 
             updateHolders();
         }
@@ -556,15 +734,38 @@
             const holdersList = document.getElementById('holdersList');
             holdersList.innerHTML = '';
 
-            mockData.holders.forEach((holder, index) => {
+            // Sort holders by balance
+            const sortedHolders = Array.from(inscriptionData.holders.entries())
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10); // Top 10
+
+            if (sortedHolders.length === 0) {
+                holdersList.innerHTML = '<div class="holder-item"><span class="holder-address">No holders yet</span><span class="holder-balance">0 MONS</span></div>';
+                return;
+            }
+
+            sortedHolders.forEach(([address, balance], index) => {
                 const holderItem = document.createElement('div');
                 holderItem.className = 'holder-item';
                 holderItem.innerHTML = `
-                    <span class="holder-address">#${index + 1} ${holder.address.slice(0, 8)}...${holder.address.slice(-6)}</span>
-                    <span class="holder-balance">${holder.balance.toLocaleString()} MONS</span>
+                    <span class="holder-address">#${index + 1} ${address.slice(0, 8)}...${address.slice(-6)}</span>
+                    <span class="holder-balance">${balance.toLocaleString()} MONS</span>
                 `;
                 holdersList.appendChild(holderItem);
             });
+        }
+
+        function updateConnectionStatus() {
+            const statusIndicator = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('connectionText');
+            
+            if (isConnected) {
+                statusIndicator.className = 'status-indicator status-connected';
+                statusText.textContent = `Connected: ${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`;
+            } else {
+                statusIndicator.className = 'status-indicator status-disconnected';
+                statusText.textContent = 'Not Connected';
+            }
         }
 
         function showToast(message, type = 'success') {
@@ -576,34 +777,43 @@
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => toast.className = 'toast', 300);
-            }, 3000);
+            }, 5000);
         }
 
-        // Auto-update stats every 30 seconds
-        setInterval(() => {
-            // Simulate new mints
-            if (Math.random() > 0.7) {
-                mockData.totalMinted += 1000;
-                if (mockData.totalMinted > 21000000) {
-                    mockData.totalMinted = 21000000;
+        // Auto-refresh data every 30 seconds
+        setInterval(async () => {
+            if (web3) {
+                const newBlockNumber = await web3.eth.getBlockNumber();
+                if (newBlockNumber > currentBlockNumber) {
+                    currentBlockNumber = newBlockNumber;
+                    await indexInscriptions();
                 }
-                updateStats();
             }
         }, 30000);
 
-        // Initialize
-        updateConnectionStatus();
-        updateStats();
+        // Initialize when page loads
+        window.addEventListener('load', async () => {
+            await initWeb3();
+            updateConnectionStatus();
+        });
 
-        // Check if wallet is already connected
+        // Handle account changes
         if (window.ethereum) {
-            window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
-                if (accounts.length > 0) {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    isConnected = false;
+                    userAccount = null;
+                    document.getElementById('mintBtn').disabled = true;
+                    document.getElementById('connectBtn').textContent = 'Connect Wallet';
+                } else {
                     userAccount = accounts[0];
-                    isConnected = true;
-                    updateConnectionStatus();
-                    document.getElementById('mintBtn').disabled = false;
+                    document.getElementById('connectBtn').textContent = `${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`;
                 }
+                updateConnectionStatus();
+            });
+
+            window.ethereum.on('chainChanged', (chainId) => {
+                window.location.reload();
             });
         }
     </script>
