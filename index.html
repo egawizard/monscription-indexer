@@ -72,35 +72,29 @@
  ************************/
 const MONAD = {
   chainId: 10143,
-  // Use Ankr for higher read throughput (good for indexer). You may switch to QuickNode for writes if you like.
   rpcUrl: 'https://rpc.ankr.com/monad_testnet'
 };
 const TICK = 'MONS';
-const MAX_SUPPLY = 21_000_000;         // 21,000,000
-const MINT_LIMIT = 1_000;              // 1000 per mint
-const DEPLOY_BLOCK = 32111409;         // First deploy block (given)
-const SCAN_BATCH = 150;                // blocks per batch to avoid rate limit
+const MAX_SUPPLY = 21_000_000;
+const MINT_LIMIT = 1_000;
+const DEPLOY_BLOCK = 32111409;
+const SCAN_BATCH = 150;
 
-let web3Read;          // read-only provider (RPC)
-let web3Wallet = null; // injected provider (wallet)
+let web3Read;
+let web3Wallet = null;
 let currentAccount = null;
 
-// In-memory state built purely from chain history (etherscription-style)
 const state = {
   totalMinted: 0,
   mintCount: 0,
-  holders: new Map(),  // address => balance
+  holders: new Map(),
   lastProcessed: DEPLOY_BLOCK - 1
 };
 
-/***********************
- * BOOTSTRAP
- ************************/
 window.addEventListener('load', async () => {
   web3Read = new Web3(MONAD.rpcUrl);
   setScanStatus('RPC connected. Indexing chain…');
   await fullIndexFromDeploy();
-  // After initial sync, start tailing new blocks
   setInterval(async () => {
     try {
       const latest = await web3Read.eth.getBlockNumber();
@@ -117,13 +111,9 @@ function setScanStatus(msg){
   document.getElementById('scanStatus').innerText = msg;
 }
 
-/***********************
- * WALLET INTEGRATION
- ************************/
 async function connectWallet(){
   if(!window.ethereum){ alert('Wallet (MetaMask) not found.'); return; }
   try{
-    // Add/Switch network (quality-of-life)
     await ensureMonadNetwork();
     const accs = await window.ethereum.request({ method:'eth_requestAccounts' });
     currentAccount = accs[0];
@@ -142,7 +132,6 @@ async function ensureMonadNetwork(){
   try{
     await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{ chainId:hex }] });
   }catch(switchErr){
-    // try add
     try{
       await window.ethereum.request({ method:'wallet_addEthereumChain', params:[{
         chainId:hex,
@@ -157,9 +146,6 @@ async function ensureMonadNetwork(){
 
 function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : ''; }
 
-/***********************
- * MINT (self-transfer with inscription JSON)
- ************************/
 async function mintToken(){
   if(!currentAccount){ alert('Connect wallet first'); return; }
   const inscription = { p:'mon-20', op:'mint', tick:TICK, amt:String(MINT_LIMIT) };
@@ -168,17 +154,15 @@ async function mintToken(){
   try{
     const txHash = await window.ethereum.request({ method:'eth_sendTransaction', params:[tx] });
     alert('Mint sent: '+txHash);
-    // Optimistic: poll the tx and process once visible, so UI updates even if tailer hasn’t caught it yet
     pollAndProcessTx(txHash);
   }catch(e){ console.error(e); alert('Mint failed: '+(e?.message||e)); }
 }
 
 async function pollAndProcessTx(hash){
   try{
-    for(let i=0;i<40;i++){ // ~40 * 1s
+    for(let i=0;i<40;i++){
       const fullTx = await web3Read.eth.getTransaction(hash);
       if(fullTx && fullTx.blockNumber){
-        // Process this tx alone (does not advance lastProcessed, only state)
         safeProcessTransaction(fullTx);
         updateUI();
         break;
@@ -188,9 +172,6 @@ async function pollAndProcessTx(hash){
   }catch(e){ console.warn('poll error', e); }
 }
 
-/***********************
- * INDEXER (etherscription-style)
- ************************/
 async function fullIndexFromDeploy(){
   try{
     const latest = await web3Read.eth.getBlockNumber();
@@ -200,25 +181,22 @@ async function fullIndexFromDeploy(){
 
 async function indexRange(from, to){
   if(to < from){ return; }
-  const total = to - from + 1;
   for(let start = from; start <= to; start += SCAN_BATCH){
     const end = Math.min(start + SCAN_BATCH - 1, to);
-    setScanStatus(`Indexing blocks ${start.toLocaleString()} - ${end.toLocaleString()} (of ${to.toLocaleString()})…`);
+    setScanStatus(`Indexing blocks ${start.toLocaleString()} - ${end.toLocaleString()}…`);
     for(let b = start; b <= end; b++){
-      const block = await web3Read.eth.getBlock(b, true);
-      if(!block || !block.transactions) { state.lastProcessed = b; continue; }
-      for(const tx of block.transactions){
-        // We fetch full tx to ensure .input is present on all RPCs
-        try{
-          const fullTx = tx.input ? tx : await web3Read.eth.getTransaction(tx.hash);
-          if(!fullTx) continue;
-          safeProcessTransaction(fullTx);
-        }catch(e){ /* ignore individual tx errors */ }
-      }
-      state.lastProcessed = b;
+      try{
+        const block = await web3Read.eth.getBlock(b, false); // only tx hashes
+        if(!block || !block.transactions) { state.lastProcessed = b; continue; }
+        for(const txHash of block.transactions){
+          const fullTx = await web3Read.eth.getTransaction(txHash);
+          if(fullTx) safeProcessTransaction(fullTx);
+        }
+        state.lastProcessed = b;
+      }catch(e){ console.warn('block error', e); }
     }
     updateUI();
-    await sleep(80); // tiny throttle between batches
+    await sleep(80);
   }
   setScanStatus(`Synced up to block ${state.lastProcessed.toLocaleString()}.`);
 }
@@ -227,27 +205,22 @@ function safeProcessTransaction(tx){
   try{
     if(!tx || !tx.input || tx.input === '0x') return;
     if(!tx.from || !tx.to) return;
-    if(tx.from.toLowerCase() !== tx.to.toLowerCase()) return; // self-transfer only
+    if(tx.from.toLowerCase() !== tx.to.toLowerCase()) return;
     const json = tryParseInscription(tx.input);
     if(!json) return;
 
-    // Normalize keys for case-insensitivity on p/op; tick MUST match exactly
     const p = (json.p||json.P||'').toString();
     const op = (json.op||json.OP||'').toString();
     const tick = (json.tick||json.TICK||'').toString();
 
-    // DEPLOY validation (for completeness; we don’t need it to mint-count here, but we enforce rules)
     if(p.toUpperCase()==='MON-20' && op.toLowerCase()==='deploy'){
-      // Optional: verify parameters match our canonical config
-      // We don’t change state here because deploy does not move balances
-      return; // ignore for balances
+      return;
     }
 
-    // MINT validation
     if(p.toUpperCase()==='MON-20' && op.toLowerCase()==='mint' && tick===TICK){
       const amt = String(json.amt||json.AMT||'');
-      if(amt !== String(MINT_LIMIT)) return; // enforce exact 1000
-      if(state.totalMinted + MINT_LIMIT > MAX_SUPPLY) return; // enforce cap
+      if(amt !== String(MINT_LIMIT)) return;
+      if(state.totalMinted + MINT_LIMIT > MAX_SUPPLY) return;
 
       const addr = tx.from.toLowerCase();
       const prev = state.holders.get(addr)||0;
@@ -255,12 +228,9 @@ function safeProcessTransaction(tx){
       state.totalMinted += MINT_LIMIT;
       state.mintCount += 1;
     }
-  }catch(e){ /* ignore bad tx */ }
+  }catch(e){ }
 }
 
-/***********************
- * UTILS & UI
- ************************/
 function tryParseInscription(inputHex){
   try{
     const hex = inputHex.startsWith('0x') ? inputHex.slice(2) : inputHex;
@@ -286,7 +256,6 @@ function updateUI(){
   document.getElementById('mintCount').innerText = state.mintCount.toLocaleString();
   document.getElementById('progressFill').style.width = Math.min(100, (minted / MAX_SUPPLY) * 100) + '%';
 
-  // Top holders
   const holdersList = document.getElementById('holdersList');
   holdersList.innerHTML = '';
   const top = Array.from(state.holders.entries()).sort((a,b)=>b[1]-a[1]).slice(0,20);
