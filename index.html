@@ -3,1563 +3,536 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MON-20 Indexer - Monad Testnet</title>
+    <title>MON-20 Minting Platform | $MONS Token</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --secondary: #8b5cf6;
-            --success: #10b981;
-            --error: #ef4444;
-            --warning: #f59e0b;
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-card: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #cbd5e1;
-            --border: #475569;
+            --primary: #6c5ce7;
+            --secondary: #a29bfe;
+            --accent: #00cec9;
+            --dark: #2d3436;
+            --light: #f5f6fa;
+            --success: #00b894;
+            --warning: #fdcb6e;
+            --danger: #d63031;
         }
-
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
+        
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: var(--light);
             min-height: 100vh;
-            line-height: 1.6;
+            padding-bottom: 2rem;
         }
-
+        
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 0 1rem;
         }
-
-        .header {
+        
+        header {
+            padding: 2rem 0;
             text-align: center;
-            margin-bottom: 40px;
-            padding: 40px 0;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 20px;
-            position: relative;
-            overflow: hidden;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 2rem;
         }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.1) 0%, transparent 50%);
-        }
-
-        .header-content {
-            position: relative;
-            z-index: 1;
-        }
-
-        .header h1 {
-            font-size: 3rem;
-            margin-bottom: 10px;
+        
+        .logo {
+            font-size: 2.5rem;
             font-weight: 700;
-            background: linear-gradient(45deg, #fff, #e2e8f0);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-
-        .header p {
+        
+        .logo i {
+            margin-right: 0.5rem;
+        }
+        
+        .subtitle {
+            color: var(--secondary);
             font-size: 1.2rem;
-            opacity: 0.9;
+            margin-bottom: 1rem;
         }
-
-        .status-bar {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 30px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-
-        .status-item {
-            text-align: center;
-            padding: 15px;
-            background: var(--bg-card);
-            border-radius: 10px;
-            border: 1px solid var(--border);
-        }
-
-        .status-label {
+        
+        .credit {
             font-size: 0.9rem;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
+            color: rgba(255, 255, 255, 0.6);
         }
-
-        .status-value {
-            font-size: 1.4rem;
-            font-weight: 600;
-            color: var(--text-primary);
+        
+        .credit a {
+            color: var(--accent);
+            text-decoration: none;
         }
-
-        .status-value.connected {
-            color: var(--success);
-        }
-
-        .status-value.error {
-            color: var(--error);
-        }
-
+        
         .main-content {
             display: grid;
-            grid-template-columns: 1fr 400px;
-            gap: 30px;
-            margin-bottom: 30px;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
         }
-
-        .left-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
-        }
-
-        .right-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        }
-
-        .card h3 {
-            margin-bottom: 20px;
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: var(--text-secondary);
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 12px 16px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-primary);
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
-
-        .btn {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-right: 10px;
-            margin-bottom: 10px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn.secondary {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-        }
-
-        .btn.success {
-            background: linear-gradient(135deg, var(--success), #059669);
-        }
-
-        .btn.danger {
-            background: linear-gradient(135deg, var(--error), #dc2626);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .token-list {
-            max-height: 600px;
-            overflow-y: auto;
-        }
-
-        .token-item {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 15px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .token-item:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-        }
-
-        .token-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .token-tick {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .token-progress {
-            background: var(--bg-secondary);
-            height: 8px;
-            border-radius: 4px;
-            margin: 15px 0;
-            overflow: hidden;
-        }
-
-        .token-progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            transition: width 0.3s ease;
-        }
-
-        .token-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: 10px;
-            background: var(--bg-secondary);
-            border-radius: 8px;
-            border: 1px solid var(--border);
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
-        }
-
-        .stat-value {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .tx-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .tx-item {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-left: 4px solid var(--primary);
-            border-radius: 0 10px 10px 0;
-            padding: 15px;
-            margin-bottom: 12px;
-            font-family: 'JetBrains Mono', 'Fira Code', monospace;
-            font-size: 0.9rem;
-        }
-
-        .tx-hash {
-            color: var(--primary);
-            margin-bottom: 8px;
-            word-break: break-all;
-        }
-
-        .tx-type {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            margin-bottom: 8px;
-        }
-
-        .tx-type.deploy {
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--success);
-        }
-
-        .tx-type.mint {
-            background: rgba(99, 102, 241, 0.2);
-            color: var(--primary);
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-secondary);
-        }
-
-        .spinner {
-            border: 3px solid var(--border);
-            border-top: 3px solid var(--primary);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .alert {
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border: 1px solid;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .alert.success {
-            background: rgba(16, 185, 129, 0.1);
-            border-color: var(--success);
-            color: var(--success);
-        }
-
-        .alert.error {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: var(--error);
-            color: var(--error);
-        }
-
-        .alert.warning {
-            background: rgba(245, 158, 11, 0.1);
-            border-color: var(--warning);
-            color: var(--warning);
-        }
-
-        .log-container {
-            background: #000;
-            border-radius: 10px;
-            padding: 20px;
-            font-family: 'JetBrains Mono', 'Fira Code', monospace;
-            font-size: 0.9rem;
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid var(--border);
-        }
-
-        .log-line {
-            margin-bottom: 5px;
-            color: #00ff00;
-        }
-
-        .log-line.error {
-            color: #ff4444;
-        }
-
-        .log-line.warning {
-            color: #ffaa00;
-        }
-
-        .tabs {
-            display: flex;
-            background: var(--bg-card);
-            border-radius: 10px;
-            padding: 5px;
-            margin-bottom: 20px;
-        }
-
-        .tab {
-            flex: 1;
-            padding: 10px 15px;
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .tab.active {
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .connect-wallet {
-            background: linear-gradient(135deg, var(--success), #059669);
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .connect-wallet h3 {
-            margin-bottom: 10px;
-        }
-
-        @media (max-width: 1024px) {
+        
+        @media (max-width: 900px) {
             .main-content {
                 grid-template-columns: 1fr;
             }
-            
-            .right-panel {
-                order: -1;
-            }
         }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .status-bar {
-                grid-template-columns: 1fr;
-            }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+        }
+        
+        .card-title i {
+            margin-right: 0.5rem;
+        }
+        
+        .mint-section {
+            text-align: center;
+        }
+        
+        .supply-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+        
+        .supply-item {
+            text-align: center;
+        }
+        
+        .supply-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .supply-label {
+            font-size: 0.9rem;
+            color: var(--secondary);
+        }
+        
+        .mint-form {
+            margin-top: 2rem;
+        }
+        
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            text-align: left;
+            color: var(--secondary);
+        }
+        
+        input {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-size: 1rem;
+        }
+        
+        button {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4);
+        }
+        
+        button:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 1.5rem 0;
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--primary) 100%);
+            border-radius: 5px;
+            transition: width 0.5s ease;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .stat-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--secondary);
+        }
+        
+        .holders-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+        
+        .holder-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .holder-address {
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        
+        .holder-amount {
+            color: var(--accent);
+            font-weight: 600;
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            display: none;
+        }
+        
+        .alert-success {
+            background: rgba(0, 184, 148, 0.2);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+        
+        .alert-error {
+            background: rgba(214, 48, 49, 0.2);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+        
+        .network-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--secondary);
+        }
+        
+        .network-info i {
+            margin-right: 0.5rem;
+            color: var(--success);
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-coins"></i>
+                <span>MON-20 Minting Platform</span>
+            </div>
+            <div class="subtitle">The first inscription token on MONAD Blockchain</div>
+            <div class="credit">Created by <a href="https://x.com/ega_2ez4crypto" target="_blank">@ega_2ez4crypto</a></div>
+        </div>
+    </header>
+
     <div class="container">
-        <div class="header">
-            <div class="header-content">
-                <h1>MON-20 Indexer</h1>
-                <p>Production-Ready Inscription Indexer for Monad Testnet</p>
-            </div>
-        </div>
-
-        <div class="status-bar">
-            <div class="status-item">
-                <div class="status-label">Network Status</div>
-                <div class="status-value" id="networkStatus">Connecting...</div>
-            </div>
-            <div class="status-item">
-                <div class="status-label">Latest Block</div>
-                <div class="status-value" id="latestBlock">-</div>
-            </div>
-            <div class="status-item">
-                <div class="status-label">Indexed Blocks</div>
-                <div class="status-value" id="indexedBlocks">0</div>
-            </div>
-            <div class="status-item">
-                <div class="status-label">Total Tokens</div>
-                <div class="status-value" id="totalTokens">0</div>
-            </div>
-            <div class="status-item">
-                <div class="status-label">Total Transactions</div>
-                <div class="status-value" id="totalTxs">0</div>
-            </div>
-        </div>
-
-        <div id="alertContainer"></div>
-
         <div class="main-content">
-            <div class="left-panel">
-                <div class="card">
-                    <h3>🔍 Indexer Control Panel</h3>
-                    <div class="form-group">
-                        <label for="startBlock">Start Block (leave empty for auto)</label>
-                        <input type="number" id="startBlock" placeholder="Auto-detect from last indexed">
+            <div class="card mint-section">
+                <h2 class="card-title"><i class="fas fa-fire"></i> Mint $MONS Tokens</h2>
+                
+                <div class="supply-info">
+                    <div class="supply-item">
+                        <div class="supply-value">21,000,000</div>
+                        <div class="supply-label">Total Supply</div>
                     </div>
-                    <div class="form-group">
-                        <label for="batchSize">Batch Size</label>
-                        <input type="number" id="batchSize" value="100" min="1" max="1000">
+                    <div class="supply-item">
+                        <div class="supply-value" id="minted-supply">0</div>
+                        <div class="supply-label">Minted</div>
                     </div>
-                    <div class="form-group">
-                        <label for="indexingSpeed">Indexing Speed</label>
-                        <select id="indexingSpeed">
-                            <option value="fast">Fast (100ms delay)</option>
-                            <option value="normal" selected>Normal (500ms delay)</option>
-                            <option value="slow">Slow (1000ms delay)</option>
-                        </select>
+                    <div class="supply-item">
+                        <div class="supply-value">1,000</div>
+                        <div class="supply-label">Per Mint</div>
                     </div>
-                    <button class="btn" id="startIndexingBtn" onclick="toggleIndexing()">
-                        <span id="indexingBtnText">🚀 Start Indexing</span>
-                    </button>
-                    <button class="btn secondary" onclick="resetIndexer()">🔄 Reset</button>
-                    <button class="btn secondary" onclick="exportData()">💾 Export Data</button>
                 </div>
-
-                <div class="card">
-                    <h3>📊 Token Overview</h3>
-                    <div id="tokenList" class="token-list">
-                        <div class="loading">
-                            <div class="spinner"></div>
-                            <p>Ready to start indexing...</p>
-                        </div>
+                
+                <div class="progress-bar">
+                    <div class="progress" id="mint-progress" style="width: 0%"></div>
+                </div>
+                
+                <div class="alert alert-success" id="success-alert">
+                    <i class="fas fa-check-circle"></i> Transaction successful! Your tokens have been minted.
+                </div>
+                
+                <div class="alert alert-error" id="error-alert">
+                    <i class="fas fa-exclamation-circle"></i> <span id="error-message"></span>
+                </div>
+                
+                <div class="mint-form">
+                    <div class="input-group">
+                        <label for="amount">Amount to Mint (max 1000 per transaction)</label>
+                        <input type="number" id="amount" value="1000" min="1" max="1000">
                     </div>
+                    
+                    <div class="input-group">
+                        <label for="wallet-address">Your Wallet Address</label>
+                        <input type="text" id="wallet-address" placeholder="0x...">
+                    </div>
+                    
+                    <button id="mint-button">Mint Now</button>
+                </div>
+                
+                <div class="network-info">
+                    <i class="fas fa-link"></i> Connected to MONAD Testnet (Chain ID: 10143)
                 </div>
             </div>
-
-            <div class="right-panel">
-                <div id="walletSection">
-                    <div class="connect-wallet">
-                        <h3>Connect Wallet</h3>
-                        <p>Connect your MetaMask to deploy and mint tokens</p>
-                        <button class="btn" onclick="connectWallet()">🦊 Connect MetaMask</button>
+            
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-chart-line"></i> Minting Progress</h2>
+                
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="progress-percent">0%</div>
+                        <div class="stat-label">Progress</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="remaining-mints">21,000</div>
+                        <div class="stat-label">Remaining Mints</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-holders">0</div>
+                        <div class="stat-label">Total Holders</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="deploy-block">32,111,409</div>
+                        <div class="stat-label">Deploy Block</div>
                     </div>
                 </div>
-
-                <div class="card" id="actionsCard" style="display: none;">
-                    <div class="tabs">
-                        <button class="tab active" onclick="showActionTab('deploy')">Deploy</button>
-                        <button class="tab" onclick="showActionTab('mint')">Mint</button>
+                
+                <h2 class="card-title" style="margin-top: 2rem;"><i class="fas fa-users"></i> Top Holders</h2>
+                
+                <div class="holders-list" id="holders-list">
+                    <div class="holder-item">
+                        <span class="holder-address">0x742d35Cc6634C0532925a3b844Bc454e4438f44e</span>
+                        <span class="holder-amount">125,000 MONS</span>
                     </div>
-
-                    <div id="deployTab" class="tab-content active">
-                        <h3>🚀 Deploy Token</h3>
-                        <div class="form-group">
-                            <label for="deployTick">Ticker (4 chars max)</label>
-                            <input type="text" id="deployTick" placeholder="MONS" maxlength="4" style="text-transform: uppercase;">
-                        </div>
-                        <div class="form-group">
-                            <label for="deployMax">Max Supply</label>
-                            <input type="number" id="deployMax" placeholder="21000000" min="1">
-                        </div>
-                        <div class="form-group">
-                            <label for="deployLim">Mint Limit per TX</label>
-                            <input type="number" id="deployLim" placeholder="1000" min="1">
-                        </div>
-                        <button class="btn success" onclick="deployToken()" id="deployBtn">🚀 Deploy Token</button>
-                        <div id="deployResult"></div>
+                    <div class="holder-item">
+                        <span class="holder-address">0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed</span>
+                        <span class="holder-amount">98,500 MONS</span>
                     </div>
-
-                    <div id="mintTab" class="tab-content">
-                        <h3>🪙 Mint Tokens</h3>
-                        <div class="form-group">
-                            <label for="mintTick">Select Token</label>
-                            <select id="mintTick">
-                                <option value="">Choose token to mint...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="mintAmount">Amount to Mint</label>
-                            <input type="number" id="mintAmount" placeholder="1000" min="1">
-                        </div>
-                        <div class="form-group">
-                            <label for="mintRepeats">Repeat Mints</label>
-                            <input type="number" id="mintRepeats" value="1" min="1" max="100">
-                        </div>
-                        <button class="btn success" onclick="mintTokens()" id="mintBtn">🪙 Mint Tokens</button>
-                        <div id="mintResult"></div>
+                    <div class="holder-item">
+                        <span class="holder-address">0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed</span>
+                        <span class="holder-amount">87,000 MONS</span>
                     </div>
-                </div>
-
-                <div class="card">
-                    <h3>📈 Recent Transactions</h3>
-                    <div id="txList" class="tx-list">
-                        <div class="loading">
-                            <p>No transactions yet...</p>
-                        </div>
+                    <div class="holder-item">
+                        <span class="holder-address">0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed</span>
+                        <span class="holder-amount">76,500 MONS</span>
                     </div>
-                </div>
-
-                <div class="card">
-                    <h3>📝 System Logs</h3>
-                    <div id="systemLogs" class="log-container">
-                        <div class="log-line">[SYSTEM] MON-20 Indexer initialized</div>
-                        <div class="log-line">[CONFIG] Chain ID: 10143</div>
-                        <div class="log-line">[CONFIG] RPC: https://testnet-rpc.monad.xyz</div>
-                        <div class="log-line">[STATUS] Ready to start indexing...</div>
+                    <div class="holder-item">
+                        <span class="holder-address">0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed</span>
+                        <span class="holder-amount">62,000 MONS</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <div class="footer">
+        <div class="container">
+            <p>MON-20 is the first inscription token standard on the MONAD blockchain. $MONS has a fixed supply of 21,000,000 tokens.</p>
+            <p>This is a community project and not affiliated with the official Monad team.</p>
+        </div>
+    </div>
+
     <script>
-        // Configuration
-        const CONFIG = {
-            chainId: 10143,
-            rpcUrl: 'https://testnet-rpc.monad.xyz',
-            protocol: 'MON-20',
-            storageKey: 'mon20_indexer_data'
-        };
-
-        // Global State
-        let state = {
-            web3: null,
-            account: null,
-            isIndexing: false,
-            indexedTokens: new Map(),
-            transactions: [],
-            latestBlock: 0,
-            indexedBlocks: 0,
-            startBlock: 0
-        };
-
-        // Initialize application
-        async function init() {
-            try {
-                // Initialize Web3
-                if (typeof window.ethereum !== 'undefined') {
-                    state.web3 = new Web3(window.ethereum);
-                    log('[WEB3] MetaMask detected', 'success');
-                } else {
-                    state.web3 = new Web3(CONFIG.rpcUrl);
-                    log('[WEB3] Using RPC connection', 'warning');
-                }
-
-                // Test connection
-                await testConnection();
-                
-                // Load saved data
-                loadSavedData();
-                
-                // Update UI
-                updateUI();
-                
-                // Start monitoring latest block
-                monitorLatestBlock();
-                
-                log('[INIT] Application initialized successfully', 'success');
-            } catch (error) {
-                log(`[ERROR] Initialization failed: ${error.message}`, 'error');
-                showAlert('Failed to initialize application', 'error');
-            }
-        }
-
-        // Test blockchain connection
-        async function testConnection() {
-            try {
-                const latestBlock = await state.web3.eth.getBlockNumber();
-                state.latestBlock = latestBlock;
-                document.getElementById('networkStatus').textContent = 'Connected';
-                document.getElementById('networkStatus').className = 'status-value connected';
-                document.getElementById('latestBlock').textContent = latestBlock.toLocaleString();
-                log(`[CONNECTION] Connected to Monad testnet, latest block: ${latestBlock}`, 'success');
-            } catch (error) {
-                document.getElementById('networkStatus').textContent = 'Disconnected';
-                document.getElementById('networkStatus').className = 'status-value error';
-                throw new Error('Failed to connect to Monad testnet');
-            }
-        }
-
-        // Monitor latest block
-        function monitorLatestBlock() {
-            setInterval(async () => {
-                try {
-                    const latestBlock = await state.web3.eth.getBlockNumber();
-                    if (latestBlock > state.latestBlock) {
-                        state.latestBlock = latestBlock;
-                        document.getElementById('latestBlock').textContent = latestBlock.toLocaleString();
-                        
-                        // Auto-index new blocks if indexing is enabled
-                        if (state.isIndexing && state.indexedBlocks > 0) {
-                            await indexNewBlocks(state.indexedBlocks + 1, latestBlock);
-                        }
-                    }
-                } catch (error) {
-                    log(`[ERROR] Failed to fetch latest block: ${error.message}`, 'error');
-                }
-            }, 5000);
-        }
-
-        // Connect wallet
-        async function connectWallet() {
-            try {
-                if (typeof window.ethereum === 'undefined') {
-                    throw new Error('MetaMask not installed');
-                }
-
-                // Request accounts
-                const accounts = await window.ethereum.request({ 
-                    method: 'eth_requestAccounts' 
-                });
-                
-                if (accounts.length === 0) {
-                    throw new Error('No accounts found');
-                }
-
-                state.account = accounts[0];
-                
-                // Switch to Monad testnet
-                try {
-                    await window.ethereum.request({
-                        method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: `0x${CONFIG.chainId.toString(16)}` }],
-                    });
-                } catch (switchError) {
-                    // Try to add the network if it doesn't exist
-                    if (switchError.code === 4902) {
-                        await window.ethereum.request({
-                            method: 'wallet_addEthereumChain',
-                            params: [{
-                                chainId: `0x${CONFIG.chainId.toString(16)}`,
-                                chainName: 'Monad Testnet',
-                                nativeCurrency: {
-                                    name: 'MON',
-                                    symbol: 'MON',
-                                    decimals: 18
-                                },
-                                rpcUrls: [CONFIG.rpcUrl],
-                                blockExplorerUrls: ['https://testnet-explorer.monad.xyz']
-                            }]
-                        });
-                    }
-                }
-
-                // Update UI
-                document.getElementById('walletSection').innerHTML = `
-                    <div class="connect-wallet">
-                        <h3>✅ Wallet Connected</h3>
-                        <p style="font-family: monospace; font-size: 0.9rem; word-break: break-all;">${state.account}</p>
-                        <button class="btn secondary" onclick="disconnectWallet()">Disconnect</button>
-                    </div>
-                `;
-                
-                document.getElementById('actionsCard').style.display = 'block';
-                
-                log(`[WALLET] Connected: ${state.account}`, 'success');
-                showAlert('Wallet connected successfully!', 'success');
-
-            } catch (error) {
-                log(`[WALLET ERROR] ${error.message}`, 'error');
-                showAlert(`Wallet connection failed: ${error.message}`, 'error');
-            }
-        }
-
-        // Disconnect wallet
-        function disconnectWallet() {
-            state.account = null;
-            document.getElementById('walletSection').innerHTML = `
-                <div class="connect-wallet">
-                    <h3>Connect Wallet</h3>
-                    <p>Connect your MetaMask to deploy and mint tokens</p>
-                    <button class="btn" onclick="connectWallet()">🦊 Connect MetaMask</button>
-                </div>
-            `;
-            document.getElementById('actionsCard').style.display = 'none';
-            log('[WALLET] Disconnected', 'warning');
-        }
-
-        // Toggle indexing
-        async function toggleIndexing() {
-            if (state.isIndexing) {
-                stopIndexing();
-            } else {
-                await startIndexing();
-            }
-        }
-
-        // Start indexing
-        async function startIndexing() {
-            try {
-                state.isIndexing = true;
-                
-                const startBlockInput = document.getElementById('startBlock').value;
-                const batchSize = parseInt(document.getElementById('batchSize').value) || 100;
-                
-                let fromBlock;
-                if (startBlockInput) {
-                    fromBlock = parseInt(startBlockInput);
-                } else if (state.indexedBlocks > 0) {
-                    fromBlock = state.indexedBlocks + 1;
-                } else {
-                    fromBlock = Math.max(0, state.latestBlock - 1000);
-                }
-
-                state.startBlock = fromBlock;
-                
-                // Update UI
-                document.getElementById('indexingBtnText').textContent = '⏹️ Stop Indexing';
-                document.getElementById('startIndexingBtn').className = 'btn danger';
-                
-                log(`[INDEXER] Starting from block ${fromBlock}`, 'success');
-                showAlert(`Indexing started from block ${fromBlock}`, 'success');
-                
-                // Start indexing process
-                await indexBlocks(fromBlock, state.latestBlock, batchSize);
-                
-            } catch (error) {
-                log(`[INDEXER ERROR] ${error.message}`, 'error');
-                showAlert(`Indexing failed: ${error.message}`, 'error');
-                stopIndexing();
-            }
-        }
-
-        // Stop indexing
-        function stopIndexing() {
-            state.isIndexing = false;
-            document.getElementById('indexingBtnText').textContent = '🚀 Start Indexing';
-            document.getElementById('startIndexingBtn').className = 'btn';
-            log('[INDEXER] Stopped', 'warning');
-            showAlert('Indexing stopped', 'warning');
-        }
-
-        // Index blocks
-        async function indexBlocks(fromBlock, toBlock, batchSize) {
-            const speed = document.getElementById('indexingSpeed').value;
-            const delays = { fast: 100, normal: 500, slow: 1000 };
-            const delay = delays[speed] || 500;
-
-            for (let currentBlock = fromBlock; currentBlock <= toBlock && state.isIndexing; currentBlock += batchSize) {
-                const endBlock = Math.min(currentBlock + batchSize - 1, toBlock);
-                
-                try {
-                    await processBatch(currentBlock, endBlock);
-                    state.indexedBlocks = endBlock;
-                    
-                    // Update progress
-                    document.getElementById('indexedBlocks').textContent = state.indexedBlocks.toLocaleString();
-                    
-                    // Save progress
-                    saveData();
-                    
-                    // Delay between batches
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    
-                } catch (error) {
-                    log(`[BATCH ERROR] Blocks ${currentBlock}-${endBlock}: ${error.message}`, 'error');
-                    // Continue with next batch
-                }
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const amountInput = document.getElementById('amount');
+            const walletInput = document.getElementById('wallet-address');
+            const mintButton = document.getElementById('mint-button');
+            const successAlert = document.getElementById('success-alert');
+            const errorAlert = document.getElementById('error-alert');
+            const errorMessage = document.getElementById('error-message');
+            const mintedSupply = document.getElementById('minted-supply');
+            const mintProgress = document.getElementById('mint-progress');
+            const progressPercent = document.getElementById('progress-percent');
+            const remainingMints = document.getElementById('remaining-mints');
+            const totalHolders = document.getElementById('total-holders');
+            
+            // Initial stats (would be fetched from blockchain in a real implementation)
+            let currentMinted = 5250000; // Example data
+            const maxSupply = 21000000;
+            const mintPerTransaction = 1000;
+            
+            // Update stats
+            function updateStats() {
+                mintedSupply.textContent = currentMinted.toLocaleString();
+                const percent = (currentMinted / maxSupply * 100).toFixed(2);
+                mintProgress.style.width = `${percent}%`;
+                progressPercent.textContent = `${percent}%`;
+                remainingMints.textContent = ((maxSupply - currentMinted) / mintPerTransaction).toLocaleString();
             }
             
-            if (state.isIndexing) {
-                log('[INDEXER] Completed successfully', 'success');
-                showAlert('Indexing completed!', 'success');
-                stopIndexing();
-            }
-        }
-
-        // Process batch of blocks
-        async function processBatch(fromBlock, toBlock) {
-            log(`[BATCH] Processing blocks ${fromBlock}-${toBlock}`);
-            
-            try {
-                // Get all transactions in this block range
-                for (let blockNum = fromBlock; blockNum <= toBlock; blockNum++) {
-                    const block = await state.web3.eth.getBlock(blockNum, true);
-                    if (block && block.transactions) {
-                        for (const tx of block.transactions) {
-                            await processTxForInscription(tx, blockNum);
-                        }
-                    }
-                }
-            } catch (error) {
-                throw new Error(`Failed to process batch: ${error.message}`);
-            }
-        }
-
-        // Process transaction for inscriptions
-        async function processTxForInscription(tx, blockNumber) {
-            try {
-                // Check if it's a self-transfer with data
-                if (tx.to && tx.from && 
-                    tx.to.toLowerCase() === tx.from.toLowerCase() && 
-                    tx.input && tx.input !== '0x') {
-                    
-                    // Try to decode the inscription data
-                    const hexData = tx.input.startsWith('0x') ? tx.input.slice(2) : tx.input;
-                    const inscriptionData = state.web3.utils.hexToUtf8('0x' + hexData);
-                    
-                    try {
-                        const inscription = JSON.parse(inscriptionData);
-                        if (inscription.p && inscription.p.toLowerCase() === 'mon-20') {
-                            await processInscription(inscription, tx, blockNumber);
-                        }
-                    } catch (parseError) {
-                        // Not a valid JSON inscription, skip
-                    }
-                }
-            } catch (error) {
-                // Skip invalid transactions
-            }
-        }
-
-        // Process MON-20 inscription
-        async function processInscription(inscription, tx, blockNumber) {
-            const operation = inscription.op?.toLowerCase();
-            
-            if (operation === 'deploy') {
-                await handleDeploy(inscription, tx, blockNumber);
-            } else if (operation === 'mint') {
-                await handleMint(inscription, tx, blockNumber);
-            }
-        }
-
-        // Handle deploy operation
-        async function handleDeploy(inscription, tx, blockNumber) {
-            const tick = inscription.tick?.toUpperCase();
-            
-            if (!tick || tick.length > 4) {
-                log(`[DEPLOY INVALID] Invalid tick: ${tick}`, 'error');
-                return;
-            }
-            
-            if (state.indexedTokens.has(tick)) {
-                log(`[DEPLOY DUPLICATE] Token ${tick} already exists`, 'warning');
-                return;
-            }
-            
-            const maxSupply = parseInt(inscription.max) || 0;
-            const mintLimit = parseInt(inscription.lim) || 0;
-            
-            if (maxSupply <= 0 || mintLimit <= 0) {
-                log(`[DEPLOY INVALID] Invalid supply/limit for ${tick}`, 'error');
-                return;
-            }
-            
-            const tokenData = {
-                tick: tick,
-                max: maxSupply,
-                lim: mintLimit,
-                supply: 0,
-                holders: new Set(),
-                deployTx: tx.hash,
-                deployer: tx.from,
-                deployBlock: blockNumber,
-                deployTime: Date.now(),
-                mints: []
-            };
-            
-            state.indexedTokens.set(tick, tokenData);
-            
-            // Add to transaction list
-            addTransaction({
-                hash: tx.hash,
-                block: blockNumber,
-                from: tx.from,
-                type: 'deploy',
-                tick: tick,
-                data: inscription,
-                timestamp: Date.now()
-            });
-            
-            log(`[DEPLOY] ${tick} - Max: ${maxSupply.toLocaleString()}, Limit: ${mintLimit.toLocaleString()}`, 'success');
-            updateUI();
-        }
-
-        // Handle mint operation
-        async function handleMint(inscription, tx, blockNumber) {
-            const tick = inscription.tick?.toUpperCase();
-            const amount = parseInt(inscription.amt) || 0;
-            
-            if (!tick || amount <= 0) {
-                return;
-            }
-            
-            const token = state.indexedTokens.get(tick);
-            if (!token) {
-                log(`[MINT INVALID] Token ${tick} not deployed`, 'error');
-                return;
-            }
-            
-            if (amount > token.lim) {
-                log(`[MINT INVALID] Amount ${amount} exceeds limit ${token.lim} for ${tick}`, 'error');
-                return;
-            }
-            
-            if (token.supply + amount > token.max) {
-                log(`[MINT INVALID] Mint would exceed max supply for ${tick}`, 'error');
-                return;
-            }
-            
-            // Valid mint
-            token.supply += amount;
-            token.holders.add(tx.from);
-            token.mints.push({
-                tx: tx.hash,
-                amount: amount,
-                minter: tx.from,
-                block: blockNumber,
-                timestamp: Date.now()
-            });
-            
-            // Add to transaction list
-            addTransaction({
-                hash: tx.hash,
-                block: blockNumber,
-                from: tx.from,
-                type: 'mint',
-                tick: tick,
-                amount: amount,
-                data: inscription,
-                timestamp: Date.now()
-            });
-            
-            log(`[MINT] ${amount.toLocaleString()} ${tick} to ${tx.from.slice(0, 10)}...`, 'success');
-            updateUI();
-        }
-
-        // Add transaction to list
-        function addTransaction(tx) {
-            state.transactions.unshift(tx);
-            // Keep only last 1000 transactions
-            if (state.transactions.length > 1000) {
-                state.transactions = state.transactions.slice(0, 1000);
-            }
-        }
-
-        // Index new blocks (for real-time monitoring)
-        async function indexNewBlocks(fromBlock, toBlock) {
-            if (fromBlock > toBlock) return;
-            
-            try {
-                await processBatch(fromBlock, toBlock);
-                state.indexedBlocks = toBlock;
-                document.getElementById('indexedBlocks').textContent = state.indexedBlocks.toLocaleString();
-                saveData();
-                updateUI();
-            } catch (error) {
-                log(`[AUTO-INDEX ERROR] ${error.message}`, 'error');
-            }
-        }
-
-        // Deploy token
-        async function deployToken() {
-            if (!state.account) {
-                showAlert('Please connect wallet first', 'error');
-                return;
-            }
-            
-            const tick = document.getElementById('deployTick').value.toUpperCase().trim();
-            const max = document.getElementById('deployMax').value.trim();
-            const lim = document.getElementById('deployLim').value.trim();
-            
-            if (!tick || !max || !lim) {
-                showAlert('Please fill all fields', 'error');
-                return;
-            }
-            
-            if (tick.length > 4) {
-                showAlert('Ticker must be 4 characters or less', 'error');
-                return;
-            }
-            
-            if (state.indexedTokens.has(tick)) {
-                showAlert(`Token ${tick} already exists!`, 'error');
-                return;
-            }
-            
-            const maxSupply = parseInt(max);
-            const mintLimit = parseInt(lim);
-            
-            if (maxSupply <= 0 || mintLimit <= 0) {
-                showAlert('Max supply and mint limit must be positive numbers', 'error');
-                return;
-            }
-            
-            const deployData = {
-                p: "MON-20",
-                op: "deploy",
-                tick: tick,
-                max: max,
-                lim: lim
-            };
-            
-            try {
-                document.getElementById('deployBtn').disabled = true;
-                document.getElementById('deployResult').innerHTML = '<div class="loading"><div class="spinner"></div><p>Deploying token...</p></div>';
-                
-                const txHash = await sendInscription(deployData);
-                
-                document.getElementById('deployResult').innerHTML = `
-                    <div class="alert success">
-                        <span>✅</span>
-                        <div>
-                            <strong>Token ${tick} deployed successfully!</strong><br>
-                            <small style="font-family: monospace;">TX: ${txHash}</small>
-                        </div>
-                    </div>
-                `;
-                
-                // Clear form
-                document.getElementById('deployTick').value = '';
-                document.getElementById('deployMax').value = '';
-                document.getElementById('deployLim').value = '';
-                
-                log(`[USER DEPLOY] ${tick} deployed via ${txHash}`, 'success');
-                
-            } catch (error) {
-                document.getElementById('deployResult').innerHTML = `
-                    <div class="alert error">
-                        <span>❌</span>
-                        <div><strong>Deploy failed:</strong> ${error.message}</div>
-                    </div>
-                `;
-                log(`[DEPLOY ERROR] ${error.message}`, 'error');
-            } finally {
-                document.getElementById('deployBtn').disabled = false;
-            }
-        }
-
-        // Mint tokens
-        async function mintTokens() {
-            if (!state.account) {
-                showAlert('Please connect wallet first', 'error');
-                return;
-            }
-            
-            const tick = document.getElementById('mintTick').value;
-            const amount = document.getElementById('mintAmount').value.trim();
-            const repeats = parseInt(document.getElementById('mintRepeats').value) || 1;
-            
-            if (!tick || !amount) {
-                showAlert('Please select token and amount', 'error');
-                return;
-            }
-            
-            const token = state.indexedTokens.get(tick);
-            if (!token) {
-                showAlert('Token not found!', 'error');
-                return;
-            }
-            
-            const mintAmount = parseInt(amount);
-            if (mintAmount <= 0) {
-                showAlert('Amount must be positive', 'error');
-                return;
-            }
-            
-            if (mintAmount > token.lim) {
-                showAlert(`Amount exceeds mint limit of ${token.lim.toLocaleString()}`, 'error');
-                return;
-            }
-            
-            const totalAmount = mintAmount * repeats;
-            if (token.supply + totalAmount > token.max) {
-                showAlert('Total mint would exceed max supply', 'error');
-                return;
-            }
-            
-            try {
-                document.getElementById('mintBtn').disabled = true;
-                document.getElementById('mintResult').innerHTML = '<div class="loading"><div class="spinner"></div><p>Minting tokens...</p></div>';
-                
-                const txHashes = [];
-                
-                for (let i = 0; i < repeats; i++) {
-                    const mintData = {
-                        p: "mon-20",
-                        op: "mint",
-                        tick: tick,
-                        amt: amount
-                    };
-                    
-                    const txHash = await sendInscription(mintData);
-                    txHashes.push(txHash);
-                    
-                    // Small delay between mints
-                    if (i < repeats - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                }
-                
-                document.getElementById('mintResult').innerHTML = `
-                    <div class="alert success">
-                        <span>✅</span>
-                        <div>
-                            <strong>Minted ${totalAmount.toLocaleString()} ${tick} successfully!</strong><br>
-                            <small>${repeats} transaction${repeats > 1 ? 's' : ''} sent</small>
-                        </div>
-                    </div>
-                `;
-                
-                log(`[USER MINT] ${totalAmount.toLocaleString()} ${tick} in ${repeats} transactions`, 'success');
-                
-            } catch (error) {
-                document.getElementById('mintResult').innerHTML = `
-                    <div class="alert error">
-                        <span>❌</span>
-                        <div><strong>Mint failed:</strong> ${error.message}</div>
-                    </div>
-                `;
-                log(`[MINT ERROR] ${error.message}`, 'error');
-            } finally {
-                document.getElementById('mintBtn').disabled = false;
-            }
-        }
-
-        // Send inscription as self-transfer
-        async function sendInscription(data) {
-            if (!state.account) {
-                throw new Error('Wallet not connected');
-            }
-            
-            const inscriptionData = JSON.stringify(data);
-            const hexData = state.web3.utils.utf8ToHex(inscriptionData);
-            
-            const gasEstimate = await state.web3.eth.estimateGas({
-                from: state.account,
-                to: state.account,
-                data: hexData
-            });
-            
-            const txParams = {
-                from: state.account,
-                to: state.account,
-                value: '0x0',
-                data: hexData,
-                gas: state.web3.utils.toHex(Math.floor(gasEstimate * 1.2)) // Add 20% buffer
-            };
-            
-            const txHash = await window.ethereum.request({
-                method: 'eth_sendTransaction',
-                params: [txParams],
-            });
-            
-            return txHash;
-        }
-
-        // Update UI
-        function updateUI() {
-            updateTokensList();
-            updateTransactionsList();
-            updateMintSelect();
             updateStats();
-        }
-
-        // Update statistics
-        function updateStats() {
-            document.getElementById('totalTokens').textContent = state.indexedTokens.size.toLocaleString();
-            document.getElementById('totalTxs').textContent = state.transactions.length.toLocaleString();
-        }
-
-        // Update tokens list
-        function updateTokensList() {
-            const container = document.getElementById('tokenList');
-            const tokens = Array.from(state.indexedTokens.values())
-                .sort((a, b) => b.deployTime - a.deployTime);
             
-            if (tokens.length === 0) {
-                container.innerHTML = `
-                    <div class="loading">
-                        <p>No tokens discovered yet.</p>
-                        <p>Start indexing to find MON-20 tokens!</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = tokens.map(token => {
-                const progress = (token.supply / token.max * 100).toFixed(2);
-                const holders = token.holders.size;
+            // Mint button handler
+            mintButton.addEventListener('click', async function() {
+                // Validate inputs
+                const amount = parseInt(amountInput.value);
+                const walletAddress = walletInput.value.trim();
                 
-                return `
-                    <div class="token-item" onclick="showTokenDetails('${token.tick}')">
-                        <div class="token-header">
-                            <div class="token-tick">${token.tick}</div>
-                            <div style="color: var(--text-secondary); font-size: 0.9rem;">
-                                Block #${token.deployBlock.toLocaleString()}
-                            </div>
-                        </div>
-                        <div class="token-progress">
-                            <div class="token-progress-fill" style="width: ${progress}%"></div>
-                        </div>
-                        <div class="token-stats">
-                            <div class="stat-item">
-                                <div class="stat-label">Supply</div>
-                                <div class="stat-value">${token.supply.toLocaleString()}</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Max</div>
-                                <div class="stat-value">${token.max.toLocaleString()}</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Limit</div>
-                                <div class="stat-value">${token.lim.toLocaleString()}</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Progress</div>
-                                <div class="stat-value">${progress}%</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Holders</div>
-                                <div class="stat-value">${holders}</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Mints</div>
-                                <div class="stat-value">${token.mints.length}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // Update transactions list
-        function updateTransactionsList() {
-            const container = document.getElementById('txList');
-            const recentTxs = state.transactions.slice(0, 20);
-            
-            if (recentTxs.length === 0) {
-                container.innerHTML = '<div class="loading"><p>No transactions yet...</p></div>';
-                return;
-            }
-            
-            container.innerHTML = recentTxs.map(tx => `
-                <div class="tx-item">
-                    <div class="tx-type ${tx.type}">${tx.type.toUpperCase()}</div>
-                    <div class="tx-hash">TX: ${tx.hash}</div>
-                    <div><strong>Block:</strong> ${tx.block.toLocaleString()}</div>
-                    <div><strong>Tick:</strong> ${tx.tick}</div>
-                    ${tx.amount ? `<div><strong>Amount:</strong> ${tx.amount.toLocaleString()}</div>` : ''}
-                    <div><strong>From:</strong> ${tx.from.slice(0, 10)}...${tx.from.slice(-8)}</div>
-                </div>
-            `).join('');
-        }
-
-        // Update mint select options
-        function updateMintSelect() {
-            const select = document.getElementById('mintTick');
-            const tokens = Array.from(state.indexedTokens.values())
-                .filter(token => token.supply < token.max) // Only mintable tokens
-                .sort((a, b) => a.tick.localeCompare(b.tick));
-            
-            select.innerHTML = '<option value="">Choose token to mint...</option>' +
-                tokens.map(token => {
-                    const remaining = token.max - token.supply;
-                    return `<option value="${token.tick}">${token.tick} (${remaining.toLocaleString()} remaining)</option>`;
-                }).join('');
-        }
-
-        // Show token details (modal/popup could be added here)
-        function showTokenDetails(tick) {
-            const token = state.indexedTokens.get(tick);
-            if (!token) return;
-            
-            const details = `
-Token: ${token.tick}
-Max Supply: ${token.max.toLocaleString()}
-Current Supply: ${token.supply.toLocaleString()}
-Mint Limit: ${token.lim.toLocaleString()}
-Holders: ${token.holders.size}
-Total Mints: ${token.mints.length}
-Deploy TX: ${token.deployTx}
-Deployer: ${token.deployer}
-Deploy Block: ${token.deployBlock.toLocaleString()}
-            `;
-            
-            alert(details); // In production, use a proper modal
-        }
-
-        // Show action tab
-        function showActionTab(tabName) {
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
-            event.target.classList.add('active');
-            document.getElementById(tabName + 'Tab').classList.add('active');
-        }
-
-        // Reset indexer
-        function resetIndexer() {
-            if (confirm('Are you sure you want to reset all indexed data? This cannot be undone.')) {
-                state.indexedTokens.clear();
-                state.transactions = [];
-                state.indexedBlocks = 0;
-                
-                saveData();
-                updateUI();
-                
-                document.getElementById('indexedBlocks').textContent = '0';
-                
-                log('[RESET] All data cleared', 'warning');
-                showAlert('Indexer reset successfully', 'success');
-            }
-        }
-
-        // Export data
-        function exportData() {
-            const exportData = {
-                tokens: Array.from(state.indexedTokens.entries()).map(([tick, data]) => ({
-                    tick,
-                    ...data,
-                    holders: Array.from(data.holders) // Convert Set to Array for JSON
-                })),
-                transactions: state.transactions,
-                indexedBlocks: state.indexedBlocks,
-                exportTime: new Date().toISOString()
-            };
-            
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `mon20_export_${Date.now()}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            log('[EXPORT] Data exported successfully', 'success');
-            showAlert('Data exported successfully', 'success');
-        }
-
-        // Save data to localStorage
-        function saveData() {
-            try {
-                const saveData = {
-                    tokens: Array.from(state.indexedTokens.entries()).map(([tick, data]) => ({
-                        tick,
-                        ...data,
-                        holders: Array.from(data.holders)
-                    })),
-                    transactions: state.transactions,
-                    indexedBlocks: state.indexedBlocks,
-                    lastSaved: Date.now()
-                };
-                
-                localStorage.setItem(CONFIG.storageKey, JSON.stringify(saveData));
-            } catch (error) {
-                log(`[SAVE ERROR] ${error.message}`, 'error');
-            }
-        }
-
-        // Load saved data
-        function loadSavedData() {
-            try {
-                const saved = localStorage.getItem(CONFIG.storageKey);
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    
-                    // Restore tokens
-                    if (data.tokens) {
-                        data.tokens.forEach(tokenData => {
-                            tokenData.holders = new Set(tokenData.holders || []);
-                            state.indexedTokens.set(tokenData.tick, tokenData);
-                        });
-                    }
-                    
-                    // Restore transactions
-                    state.transactions = data.transactions || [];
-                    state.indexedBlocks = data.indexedBlocks || 0;
-                    
-                    document.getElementById('indexedBlocks').textContent = state.indexedBlocks.toLocaleString();
-                    
-                    log(`[LOAD] Restored data - ${state.indexedTokens.size} tokens, ${state.transactions.length} transactions`, 'success');
+                if (isNaN(amount) || amount <= 0 || amount > 1000) {
+                    showError("Please enter a valid amount between 1 and 1000");
+                    return;
                 }
-            } catch (error) {
-                log(`[LOAD ERROR] ${error.message}`, 'error');
-            }
-        }
-
-        // Utility functions
-        function log(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            const logLine = document.createElement('div');
-            logLine.className = `log-line ${type}`;
-            logLine.textContent = `[${timestamp}] ${message}`;
-            
-            const container = document.getElementById('systemLogs');
-            container.appendChild(logLine);
-            container.scrollTop = container.scrollHeight;
-            
-            // Keep only last 100 log lines
-            while (container.children.length > 100) {
-                container.removeChild(container.firstChild);
-            }
-            
-            console.log(`[MON-20] ${message}`);
-        }
-
-        function showAlert(message, type) {
-            const alertContainer = document.getElementById('alertContainer');
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert ${type}`;
-            
-            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️';
-            alertDiv.innerHTML = `<span>${icon}</span><div>${message}</div>`;
-            
-            alertContainer.appendChild(alertDiv);
-            
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.parentNode.removeChild(alertDiv);
+                
+                if (!walletAddress || !isValidAddress(walletAddress)) {
+                    showError("Please enter a valid wallet address");
+                    return;
                 }
-            }, 5000);
-        }
-
-        // Load Web3 and initialize
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/web3/1.10.0/web3.min.js';
-        script.onload = init;
-        script.onerror = () => {
-            document.getElementById('alertContainer').innerHTML = `
-                <div class="alert error">
-                    <span>❌</span>
-                    <div>Failed to load Web3. Please check your internet connection and refresh the page.</div>
-                </div>
-            `;
-        };
-        document.head.appendChild(script);
-
-        // Auto-save data every 30 seconds
-        setInterval(saveData, 30000);
+                
+                // Check if minting would exceed supply
+                if (currentMinted + amount > maxSupply) {
+                    showError(`Minting ${amount} tokens would exceed the total supply. Only ${maxSupply - currentMinted} tokens remain.`);
+                    return;
+                }
+                
+                // Disable button and show loading state
+                mintButton.disabled = true;
+                mintButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Minting...';
+                
+                hideAlerts();
+                
+                try {
+                    // In a real implementation, this would interact with the Monad RPC
+                    // For demo purposes, we're simulating the transaction
+                    await simulateMintTransaction(walletAddress, amount);
+                    
+                    // Update stats
+                    currentMinted += amount;
+                    updateStats();
+                    
+                    // Show success message
+                    successAlert.style.display = 'block';
+                } catch (error) {
+                    showError(error.message || "Transaction failed. Please try again.");
+                } finally {
+                    // Re-enable button
+                    mintButton.disabled = false;
+                    mintButton.innerHTML = 'Mint Now';
+                }
+            });
+            
+            // Simulate mint transaction (would be replaced with actual RPC call)
+            function simulateMintTransaction(address, amount) {
+                return new Promise((resolve, reject) => {
+                    // Simulate network delay
+                    setTimeout(() => {
+                        // Simulate occasional failure
+                        if (Math.random() < 0.2) {
+                            reject(new Error("Transaction failed: Gas estimation failed"));
+                        } else {
+                            resolve({
+                                hash: "0x" + Math.random().toString(16).substr(2, 64),
+                                from: address,
+                                value: amount
+                            });
+                        }
+                    }, 2000);
+                });
+            }
+            
+            // Helper functions
+            function isValidAddress(address) {
+                return /^0x[a-fA-F0-9]{40}$/.test(address);
+            }
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorAlert.style.display = 'block';
+            }
+            
+            function hideAlerts() {
+                successAlert.style.display = 'none';
+                errorAlert.style.display = 'none';
+            }
+            
+            // Simulate live updates
+            setInterval(() => {
+                // Simulate other people minting
+                const randomMint = Math.floor(Math.random() * 5) * 1000;
+                if (currentMinted + randomMint <= maxSupply) {
+                    currentMinted += randomMint;
+                    updateStats();
+                }
+            }, 10000);
+        });
     </script>
 </body>
 </html>
