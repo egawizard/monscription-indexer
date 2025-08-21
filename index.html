@@ -519,11 +519,12 @@
             lastProcessedBlock: DEPLOY_BLOCK - 1
         };
 
+        // Cache key for localStorage alternative (using memory)
+        let dataCache = null;
+
         // Initialize Web3 connection
         async function initWeb3() {
             try {
-                showIndexingStatus(true);
-                
                 if (window.ethereum) {
                     web3 = new Web3(window.ethereum);
                 } else {
@@ -540,17 +541,67 @@
                 } catch (error) {
                     throw new Error('Failed to connect to MONAD RPC: ' + error.message);
                 }
+
+                // Load cached data first (if available)
+                loadCachedData();
                 
-                // Start indexing inscriptions
-                await indexInscriptions();
+                // Show cached data immediately
+                updateStats();
+                
+                // Then check for new blocks and index only new ones
+                await checkForNewBlocks();
                 
             } catch (error) {
                 console.error('Failed to initialize Web3:', error);
                 showError('Failed to connect to MONAD network: ' + error.message);
-                // Set default stats to remove loading indicators
+                // Show cached data or defaults
                 updateStats();
-            } finally {
-                showIndexingStatus(false);
+            }
+        }
+
+        function loadCachedData() {
+            // In a real implementation, you'd load from localStorage
+            // For now, we'll use memory cache
+            if (dataCache) {
+                inscriptionData = { ...dataCache };
+                console.log('Loaded cached data:', {
+                    totalMinted: inscriptionData.totalMinted,
+                    holders: inscriptionData.holders.size,
+                    lastProcessedBlock: inscriptionData.lastProcessedBlock
+                });
+            }
+        }
+
+        function saveDataToCache() {
+            // Convert Map to object for storage
+            const cacheData = {
+                totalMinted: inscriptionData.totalMinted,
+                holders: new Map(inscriptionData.holders),
+                mintCount: inscriptionData.mintCount,
+                lastProcessedBlock: inscriptionData.lastProcessedBlock
+            };
+            dataCache = cacheData;
+            console.log('Data cached up to block:', inscriptionData.lastProcessedBlock);
+        }
+
+        async function checkForNewBlocks() {
+            if (isIndexing) return;
+            
+            try {
+                const newBlockNumber = await web3.eth.getBlockNumber();
+                const lastProcessed = inscriptionData.lastProcessedBlock;
+                
+                if (newBlockNumber > lastProcessed) {
+                    console.log(`New blocks detected: ${lastProcessed} -> ${newBlockNumber}`);
+                    currentBlockNumber = newBlockNumber;
+                    
+                    // Only index new blocks since last processed
+                    await indexNewBlocks(lastProcessed + 1, newBlockNumber);
+                } else {
+                    console.log('No new blocks to process');
+                }
+            } catch (error) {
+                console.error('Error checking for new blocks:', error);
             }
         }
 
@@ -690,86 +741,77 @@
             }
         }
 
-        async function indexInscriptions() {
+        async function indexNewBlocks(fromBlock, toBlock) {
             if (isIndexing) {
                 console.log('Indexing already in progress, skipping...');
                 return;
             }
             
             isIndexing = true;
-            showIndexingStatus(true);
+            const blockCount = toBlock - fromBlock + 1;
+            
+            // Only show indexing status for large ranges
+            if (blockCount > 100) {
+                showIndexingStatus(true);
+                console.log(`Indexing ${blockCount} new blocks from ${fromBlock} to ${toBlock}...`);
+            } else {
+                console.log(`Scanning ${blockCount} recent blocks...`);
+            }
             
             try {
-                console.log('Starting inscription indexing...');
+                let newMintsFound = 0;
                 
-                const fromBlock = Math.max(inscriptionData.lastProcessedBlock + 1, DEPLOY_BLOCK);
-                const toBlock = currentBlockNumber;
-                
-                if (fromBlock > toBlock) {
-                    console.log('No new blocks to process');
-                    updateStats();
-                    indexingComplete = true;
-                    return;
-                }
-                
-                console.log(`Indexing from block ${fromBlock} to ${toBlock} (${toBlock - fromBlock + 1} blocks)`);
-
-                // Process in chunks to avoid timeout
-                const CHUNK_SIZE = 1000;
-                let processedCount = 0;
+                // Process in smaller chunks for better UX
+                const CHUNK_SIZE = blockCount > 1000 ? 500 : 100;
                 
                 for (let start = fromBlock; start <= toBlock; start += CHUNK_SIZE) {
                     const end = Math.min(start + CHUNK_SIZE - 1, toBlock);
                     
-                    console.log(`Processing blocks ${start} to ${end}...`);
-                    
                     try {
-                        // Get all transactions in this block range
                         for (let blockNum = start; blockNum <= end; blockNum++) {
-                            try {
-                                const block = await web3.eth.getBlock(blockNum, true);
-                                if (block && block.transactions) {
-                                    for (const tx of block.transactions) {
-                                        // Check for self-transfers with data
-                                        if (tx.input && tx.input !== '0x' && tx.from && tx.to && 
-                                            tx.from.toLowerCase() === tx.to.toLowerCase()) {
-                                            await processTransaction(tx);
+                            const block = await web3.eth.getBlock(blockNum, true);
+                            if (block && block.transactions) {
+                                for (const tx of block.transactions) {
+                                    if (tx.input && tx.input !== '0x' && tx.from && tx.to && 
+                                        tx.from.toLowerCase() === tx.to.toLowerCase()) {
+                                        const wasValidMint = await processTransaction(tx);
+                                        if (wasValidMint) {
+                                            newMintsFound++;
                                         }
                                     }
                                 }
-                            } catch (blockError) {
-                                console.warn(`Error processing block ${blockNum}:`, blockError);
-                                continue; // Skip failed blocks
-                            }
-                            
-                            processedCount++;
-                            if (processedCount % 100 === 0) {
-                                console.log(`Processed ${processedCount} blocks...`);
-                                updateStats(); // Update UI periodically
                             }
                         }
                         
                         inscriptionData.lastProcessedBlock = end;
                         
+                        // Update UI periodically for large ranges
+                        if (blockCount > 100 && (end - fromBlock) % 1000 === 0) {
+                            updateStats();
+                        }
+                        
                     } catch (error) {
-                        console.error(`Error processing chunk ${start}-${end}:`, error);
-                        // Continue with next chunk
-                        break;
+                        console.warn(`Error processing chunk ${start}-${end}:`, error);
+                        continue;
                     }
                 }
 
-                console.log(`Indexing completed. Processed ${processedCount} blocks.`);
-                console.log(`Total minted: ${inscriptionData.totalMinted} MONS`);
-                console.log(`Mint count: ${inscriptionData.mintCount}`);
-                console.log(`Holders: ${inscriptionData.holders.size}`);
+                // Save to cache after successful indexing
+                saveDataToCache();
+                
+                if (newMintsFound > 0) {
+                    console.log(`Found ${newMintsFound} new mints in ${blockCount} blocks`);
+                    showToast(`${newMintsFound} new mint(s) discovered!`, 'success');
+                } else if (blockCount > 100) {
+                    console.log(`No new mints found in ${blockCount} blocks`);
+                }
                 
                 updateStats();
                 indexingComplete = true;
                 
             } catch (error) {
-                console.error('Error indexing inscriptions:', error);
-                showError('Error loading inscription data: ' + error.message);
-                updateStats(); // Show default values
+                console.error('Error indexing new blocks:', error);
+                showError('Error loading new inscription data: ' + error.message);
             } finally {
                 isIndexing = false;
                 showIndexingStatus(false);
@@ -778,7 +820,7 @@
 
         async function processTransaction(tx) {
             try {
-                if (!tx.input || tx.input === '0x') return;
+                if (!tx.input || tx.input === '0x') return false;
 
                 // Decode hex data
                 const hexData = tx.input.slice(2);
@@ -793,7 +835,7 @@
                         }
                     }
                 } catch (e) {
-                    return; // Skip invalid hex
+                    return false; // Skip invalid hex
                 }
                 
                 try {
@@ -815,13 +857,16 @@
                         inscriptionData.holders.set(holderAddress, currentBalance + 1000);
                         
                         console.log(`Valid mint found: ${tx.from} minted 1000 MONS (tx: ${tx.hash})`);
+                        return true;
                     }
                 } catch (e) {
                     // Not valid JSON, ignore silently
                 }
                 
+                return false;
             } catch (error) {
                 console.warn('Error processing transaction:', tx.hash, error);
+                return false;
             }
         }
 
@@ -922,25 +967,15 @@
         }
 
         async function refreshData() {
-            try {
-                const newBlockNumber = await web3.eth.getBlockNumber();
-                if (newBlockNumber > currentBlockNumber) {
-                    console.log(`New blocks detected: ${currentBlockNumber} -> ${newBlockNumber}`);
-                    currentBlockNumber = newBlockNumber;
-                    await indexInscriptions();
-                }
-            } catch (error) {
-                console.error('Error refreshing data:', error);
-                showToast('Error refreshing data: ' + error.message, 'error');
-            }
+            await checkForNewBlocks();
         }
 
-        // Auto-refresh data every 60 seconds
+        // Auto-refresh data every 30 seconds (faster for better UX)
         setInterval(async () => {
-            if (web3 && !isIndexing && indexingComplete) {
+            if (web3 && !isIndexing) {
                 await refreshData();
             }
-        }, 60000);
+        }, 30000);
 
         // Initialize when page loads
         window.addEventListener('load', async () => {
