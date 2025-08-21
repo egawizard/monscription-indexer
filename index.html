@@ -1,190 +1,300 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MONAD MON-20 Inscription Minter</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #0e0e16; color: #fff; }
-    .container { max-width: 900px; margin: auto; padding: 20px; }
-    .header { text-align: center; margin-bottom: 30px; }
-    .stats { display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; }
-    .stat { background: #1a1a2b; padding: 20px; border-radius: 12px; text-align: center; flex: 1; }
-    .stat h2 { margin: 0; font-size: 2rem; color: #4ecdc4; }
-    .stat p { margin: 5px 0 0; opacity: 0.8; }
-    .holders { background: #1a1a2b; padding: 20px; border-radius: 12px; margin-top: 20px; }
-    .holder { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
-    .holder:last-child { border-bottom: none; }
-    .progress { margin: 20px 0; background: #333; border-radius: 8px; overflow: hidden; height: 20px; }
-    .progress-fill { background: linear-gradient(90deg,#4ecdc4,#45b7d1); height: 100%; width: 0; transition: width 0.3s ease; }
-    .footer { margin-top: 30px; text-align: center; font-size: 0.9rem; opacity: 0.7; }
-    a { color: #4ecdc4; text-decoration: none; }
-    .actions { text-align: center; margin-top: 20px; }
-    button { background: #4ecdc4; border: none; padding: 12px 20px; margin: 10px; border-radius: 8px; cursor: pointer; font-size: 1rem; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MONAD MON-20 • Inscription Indexer & Minter</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.8.2/web3.min.js"></script>
+  <style>
+    :root{
+      --bg:#0b0d14;--card:#141827;--accent:#4ecdc4;--accent2:#45b7d1;--muted:#9aa3b2;--text:#e9eef5;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+    .container{max-width:1100px;margin:0 auto;padding:28px}
+    .title{font-weight:800;text-align:center;font-size:28px;margin:8px 0 6px}
+    .subtitle{text-align:center;color:var(--muted);margin:0 0 18px}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px auto 8px;max-width:980px}
+    .card{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+    .card h2{margin:0;font-size:28px;color:var(--accent)}
+    .card p{margin:6px 0 0;color:var(--muted);font-size:13px}
+    .progress{height:12px;background:#262a3a;border-radius:8px;overflow:hidden;margin:12px auto;max-width:980px}
+    .bar{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .25s ease}
+    .row{display:flex;gap:12px;align-items:center;justify-content:center;margin:16px 0}
+    button{background:var(--accent);border:none;color:#031016;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer}
+    button.secondary{background:#23283a;color:var(--text)}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .holders{max-width:980px;margin:18px auto}
+    .holders h3{margin:0 0 10px}
+    .holder{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.06)}
+    .footer{opacity:.7;text-align:center;margin:22px 0 10px;font-size:13px}
+    .mono{font-family: ui-monospace,SFMono-Regular,Menlo,monospace}
+    .status{color:var(--muted);text-align:center;margin-top:4px}
+    .pill{display:inline-block;background:#23283a;color:var(--text);padding:6px 10px;border-radius:999px}
+    @media (max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}}
+  </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <h1>MONAD MON-20</h1>
-      <p>The First Inscription Token on MONAD Testnet ($MONS)</p>
-      <p id="status">Connecting...</p>
-    </div>
+    <div class="title">MONAD MON-20</div>
+    <div id="subtitle" class="subtitle">The First Inscription Token on MONAD Testnet ($MONS)</div>
 
     <div class="stats">
-      <div class="stat"><h2 id="totalMinted">0</h2><p>Total Minted</p></div>
-      <div class="stat"><h2 id="remaining">21,000,000</h2><p>Remaining</p></div>
-      <div class="stat"><h2 id="holders">0</h2><p>Holders</p></div>
-      <div class="stat"><h2 id="mintCount">0</h2><p>Mint Count</p></div>
+      <div class="card"><h2 id="totalMinted">0</h2><p>Total Minted</p></div>
+      <div class="card"><h2 id="remaining">21,000,000</h2><p>Remaining</p></div>
+      <div class="card"><h2 id="holders">0</h2><p>Holders</p></div>
+      <div class="card"><h2 id="mintCount">0</h2><p>Mint Count</p></div>
     </div>
 
-    <div class="progress"><div id="progressFill" class="progress-fill"></div></div>
+    <div class="progress"><div id="progressFill" class="bar"></div></div>
+    <div id="scanStatus" class="status">Connecting RPC…</div>
 
-    <div class="holders">
-      <h3>Top Holders</h3>
-      <div id="holdersList"><div class="holder"><span>No holders yet</span><span>0 MONS</span></div></div>
-    </div>
-
-    <div class="actions">
-      <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+    <div class="row">
+      <button id="connectBtn" class="secondary" onclick="connectWallet()">Connect Wallet</button>
       <button id="mintBtn" onclick="mintToken()" disabled>Mint 1000 MONS</button>
+      <span id="addrPill" class="pill mono" style="display:none"></span>
+    </div>
+
+    <div class="card holders">
+      <h3>Top Holders</h3>
+      <div id="holdersList" class="mono"><div class="holder"><span>No holders yet</span><span>0 MONS</span></div></div>
     </div>
 
     <div class="footer">
-      Created by <a href="https://x.com/ega_2ez4crypto" target="_blank">@ega_2ez4crypto</a><br>
+      Created by <a href="https://x.com/ega_2ez4crypto" target="_blank" style="color:var(--accent)">@ega_2ez4crypto</a><br/>
       Fully decentralized • No database • All data onchain
     </div>
   </div>
 
-  <script>
-    const MONAD_CONFIG = { chainId: 10143, rpcUrl: 'https://rpc.ankr.com/monad_testnet' };
-    const DEPLOY_BLOCK = 32111409;
-    const MAX_SUPPLY = 21000000;
+<script>
+/***********************
+ * MON-20 PARAMETERS
+ ************************/
+const MONAD = {
+  chainId: 10143,
+  // Use Ankr for higher read throughput (good for indexer). You may switch to QuickNode for writes if you like.
+  rpcUrl: 'https://rpc.ankr.com/monad_testnet'
+};
+const TICK = 'MONS';
+const MAX_SUPPLY = 21_000_000;         // 21,000,000
+const MINT_LIMIT = 1_000;              // 1000 per mint
+const DEPLOY_BLOCK = 32111409;         // First deploy block (given)
+const SCAN_BATCH = 150;                // blocks per batch to avoid rate limit
 
-    let web3;
-    let userAccount = null;
-    let inscriptionData = { totalMinted: 0, holders: new Map(), mintCount: 0, lastProcessedBlock: DEPLOY_BLOCK - 1 };
+let web3Read;          // read-only provider (RPC)
+let web3Wallet = null; // injected provider (wallet)
+let currentAccount = null;
 
-    async function initWeb3() {
-      web3 = new Web3(MONAD_CONFIG.rpcUrl);
-      try {
-        const currentBlock = await web3.eth.getBlockNumber();
-        document.getElementById('status').innerText = `Connected • Block: ${currentBlock}`;
-        if (inscriptionData.lastProcessedBlock < currentBlock) {
-          await indexNewBlocks(inscriptionData.lastProcessedBlock + 1, currentBlock);
-        }
-        setInterval(async () => {
-          const latest = await web3.eth.getBlockNumber();
-          if (latest > inscriptionData.lastProcessedBlock) {
-            await indexNewBlocks(inscriptionData.lastProcessedBlock + 1, latest);
-          }
-        }, 30000);
-      } catch (err) {
-        document.getElementById('status').innerText = 'Failed: ' + err.message;
+// In-memory state built purely from chain history (etherscription-style)
+const state = {
+  totalMinted: 0,
+  mintCount: 0,
+  holders: new Map(),  // address => balance
+  lastProcessed: DEPLOY_BLOCK - 1
+};
+
+/***********************
+ * BOOTSTRAP
+ ************************/
+window.addEventListener('load', async () => {
+  web3Read = new Web3(MONAD.rpcUrl);
+  setScanStatus('RPC connected. Indexing chain…');
+  await fullIndexFromDeploy();
+  // After initial sync, start tailing new blocks
+  setInterval(async () => {
+    try {
+      const latest = await web3Read.eth.getBlockNumber();
+      if (latest > state.lastProcessed) {
+        await indexRange(state.lastProcessed + 1, latest);
       }
+    } catch (e) {
+      console.warn('tail error', e);
+    }
+  }, 15_000);
+});
+
+function setScanStatus(msg){
+  document.getElementById('scanStatus').innerText = msg;
+}
+
+/***********************
+ * WALLET INTEGRATION
+ ************************/
+async function connectWallet(){
+  if(!window.ethereum){ alert('Wallet (MetaMask) not found.'); return; }
+  try{
+    // Add/Switch network (quality-of-life)
+    await ensureMonadNetwork();
+    const accs = await window.ethereum.request({ method:'eth_requestAccounts' });
+    currentAccount = accs[0];
+    web3Wallet = new Web3(window.ethereum);
+    document.getElementById('connectBtn').innerText = 'Wallet Connected';
+    document.getElementById('mintBtn').disabled = false;
+    const pill = document.getElementById('addrPill');
+    pill.style.display='inline-block';
+    pill.textContent = shortAddr(currentAccount);
+    document.getElementById('subtitle').innerText = `Wallet: ${currentAccount}`;
+  }catch(e){ console.error(e); }
+}
+
+async function ensureMonadNetwork(){
+  const hex = '0x'+MONAD.chainId.toString(16);
+  try{
+    await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{ chainId:hex }] });
+  }catch(switchErr){
+    // try add
+    try{
+      await window.ethereum.request({ method:'wallet_addEthereumChain', params:[{
+        chainId:hex,
+        chainName:'Monad Testnet',
+        rpcUrls:[MONAD.rpcUrl],
+        nativeCurrency:{ name:'MON', symbol:'MON', decimals:18 },
+        blockExplorerUrls:['https://testnet.monadexplorer.com']
+      }] });
+    }catch(addErr){ console.error(addErr); }
+  }
+}
+
+function shortAddr(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : ''; }
+
+/***********************
+ * MINT (self-transfer with inscription JSON)
+ ************************/
+async function mintToken(){
+  if(!currentAccount){ alert('Connect wallet first'); return; }
+  const inscription = { p:'mon-20', op:'mint', tick:TICK, amt:String(MINT_LIMIT) };
+  const dataHex = '0x' + toHex(JSON.stringify(inscription));
+  const tx = { from: currentAccount, to: currentAccount, value:'0x0', data:dataHex };
+  try{
+    const txHash = await window.ethereum.request({ method:'eth_sendTransaction', params:[tx] });
+    alert('Mint sent: '+txHash);
+    // Optimistic: poll the tx and process once visible, so UI updates even if tailer hasn’t caught it yet
+    pollAndProcessTx(txHash);
+  }catch(e){ console.error(e); alert('Mint failed: '+(e?.message||e)); }
+}
+
+async function pollAndProcessTx(hash){
+  try{
+    for(let i=0;i<40;i++){ // ~40 * 1s
+      const fullTx = await web3Read.eth.getTransaction(hash);
+      if(fullTx && fullTx.blockNumber){
+        // Process this tx alone (does not advance lastProcessed, only state)
+        safeProcessTransaction(fullTx);
+        updateUI();
+        break;
+      }
+      await sleep(1000);
+    }
+  }catch(e){ console.warn('poll error', e); }
+}
+
+/***********************
+ * INDEXER (etherscription-style)
+ ************************/
+async function fullIndexFromDeploy(){
+  try{
+    const latest = await web3Read.eth.getBlockNumber();
+    await indexRange(state.lastProcessed + 1, latest);
+  }catch(e){ console.error('initial index failed', e); setScanStatus('Indexing failed: '+e.message); }
+}
+
+async function indexRange(from, to){
+  if(to < from){ return; }
+  const total = to - from + 1;
+  for(let start = from; start <= to; start += SCAN_BATCH){
+    const end = Math.min(start + SCAN_BATCH - 1, to);
+    setScanStatus(`Indexing blocks ${start.toLocaleString()} - ${end.toLocaleString()} (of ${to.toLocaleString()})…`);
+    for(let b = start; b <= end; b++){
+      const block = await web3Read.eth.getBlock(b, true);
+      if(!block || !block.transactions) { state.lastProcessed = b; continue; }
+      for(const tx of block.transactions){
+        // We fetch full tx to ensure .input is present on all RPCs
+        try{
+          const fullTx = tx.input ? tx : await web3Read.eth.getTransaction(tx.hash);
+          if(!fullTx) continue;
+          safeProcessTransaction(fullTx);
+        }catch(e){ /* ignore individual tx errors */ }
+      }
+      state.lastProcessed = b;
+    }
+    updateUI();
+    await sleep(80); // tiny throttle between batches
+  }
+  setScanStatus(`Synced up to block ${state.lastProcessed.toLocaleString()}.`);
+}
+
+function safeProcessTransaction(tx){
+  try{
+    if(!tx || !tx.input || tx.input === '0x') return;
+    if(!tx.from || !tx.to) return;
+    if(tx.from.toLowerCase() !== tx.to.toLowerCase()) return; // self-transfer only
+    const json = tryParseInscription(tx.input);
+    if(!json) return;
+
+    // Normalize keys for case-insensitivity on p/op; tick MUST match exactly
+    const p = (json.p||json.P||'').toString();
+    const op = (json.op||json.OP||'').toString();
+    const tick = (json.tick||json.TICK||'').toString();
+
+    // DEPLOY validation (for completeness; we don’t need it to mint-count here, but we enforce rules)
+    if(p.toUpperCase()==='MON-20' && op.toLowerCase()==='deploy'){
+      // Optional: verify parameters match our canonical config
+      // We don’t change state here because deploy does not move balances
+      return; // ignore for balances
     }
 
-    async function connectWallet() {
-      if (!window.ethereum) {
-        alert('MetaMask not found!');
-        return;
-      }
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        userAccount = accounts[0];
-        document.getElementById('connectBtn').innerText = userAccount.slice(0,6) + '...' + userAccount.slice(-4);
-        document.getElementById('mintBtn').disabled = false;
-        document.getElementById('status').innerText = `Wallet Connected: ${userAccount}`;
-      } catch (e) {
-        console.error(e);
-      }
+    // MINT validation
+    if(p.toUpperCase()==='MON-20' && op.toLowerCase()==='mint' && tick===TICK){
+      const amt = String(json.amt||json.AMT||'');
+      if(amt !== String(MINT_LIMIT)) return; // enforce exact 1000
+      if(state.totalMinted + MINT_LIMIT > MAX_SUPPLY) return; // enforce cap
+
+      const addr = tx.from.toLowerCase();
+      const prev = state.holders.get(addr)||0;
+      state.holders.set(addr, prev + MINT_LIMIT);
+      state.totalMinted += MINT_LIMIT;
+      state.mintCount += 1;
     }
+  }catch(e){ /* ignore bad tx */ }
+}
 
-    async function mintToken() {
-      if (!userAccount) {
-        alert('Please connect wallet first');
-        return;
-      }
-      const inscriptionJson = JSON.stringify({ p: "mon-20", op: "mint", tick: "MONS", amt: "1000" });
-      const dataHex = '0x' + Array.from(new TextEncoder().encode(inscriptionJson)).map(b => b.toString(16).padStart(2,'0')).join('');
-      try {
-        const tx = {
-          from: userAccount,
-          to: userAccount,
-          value: '0x0',
-          data: dataHex
-        };
-        const txHash = await window.ethereum.request({ method: 'eth_sendTransaction', params: [tx] });
-        alert('Mint sent! Tx: ' + txHash);
-      } catch (e) {
-        console.error(e);
-        alert('Mint failed: ' + e.message);
-      }
-    }
+/***********************
+ * UTILS & UI
+ ************************/
+function tryParseInscription(inputHex){
+  try{
+    const hex = inputHex.startsWith('0x') ? inputHex.slice(2) : inputHex;
+    let out='';
+    for(let i=0;i<hex.length;i+=2){ out += String.fromCharCode(parseInt(hex.substr(i,2),16)); }
+    return JSON.parse(out);
+  }catch{ return null; }
+}
 
-    async function indexNewBlocks(fromBlock, toBlock) {
-      for (let i = fromBlock; i <= toBlock; i++) {
-        const block = await web3.eth.getBlock(i, true);
-        if (!block || !block.transactions) continue;
-        for (const tx of block.transactions) {
-          try {
-            const fullTx = await web3.eth.getTransaction(tx.hash);
-            if (fullTx && fullTx.input && fullTx.input !== '0x' && fullTx.from && fullTx.to && fullTx.from.toLowerCase() === fullTx.to.toLowerCase()) {
-              processTransaction(fullTx);
-            }
-          } catch (e) {
-            console.warn("Error fetching tx:", tx.hash, e);
-          }
-        }
-        inscriptionData.lastProcessedBlock = i;
-      }
-      updateStats();
-    }
+function toHex(str){
+  const bytes = new TextEncoder().encode(str);
+  return Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 
-    function processTransaction(tx) {
-      try {
-        const hexData = tx.input.slice(2);
-        let decoded = '';
-        for (let i = 0; i < hexData.length; i += 2) decoded += String.fromCharCode(parseInt(hexData.substr(i, 2), 16));
-        const data = JSON.parse(decoded);
-        if ((data.p === 'mon-20' || data.p === 'MON-20') && (data.op === 'mint' || data.op === 'MINT') && data.tick === 'MONS' && data.amt === '1000') {
-          inscriptionData.totalMinted += 1000;
-          inscriptionData.mintCount++;
-          const addr = tx.from.toLowerCase();
-          const bal = inscriptionData.holders.get(addr) || 0;
-          inscriptionData.holders.set(addr, bal + 1000);
-        }
-      } catch (e) { return; }
-    }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
-    function updateStats() {
-      const minted = inscriptionData.totalMinted;
-      const remaining = Math.max(0, MAX_SUPPLY - minted);
-      const holders = inscriptionData.holders.size;
-      const mints = inscriptionData.mintCount;
-      const progress = Math.min((minted / MAX_SUPPLY) * 100, 100);
+function updateUI(){
+  const minted = state.totalMinted;
+  const remaining = Math.max(0, MAX_SUPPLY - minted);
+  document.getElementById('totalMinted').innerText = minted.toLocaleString();
+  document.getElementById('remaining').innerText = remaining.toLocaleString();
+  document.getElementById('holders').innerText = state.holders.size.toLocaleString();
+  document.getElementById('mintCount').innerText = state.mintCount.toLocaleString();
+  document.getElementById('progressFill').style.width = Math.min(100, (minted / MAX_SUPPLY) * 100) + '%';
 
-      document.getElementById('totalMinted').innerText = minted.toLocaleString();
-      document.getElementById('remaining').innerText = remaining.toLocaleString();
-      document.getElementById('holders').innerText = holders;
-      document.getElementById('mintCount').innerText = mints;
-      document.getElementById('progressFill').style.width = progress + '%';
-
-      const holdersList = document.getElementById('holdersList');
-      holdersList.innerHTML = '';
-      const sorted = Array.from(inscriptionData.holders.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
-      if (sorted.length === 0) {
-        holdersList.innerHTML = '<div class="holder"><span>No holders yet</span><span>0 MONS</span></div>';
-        return;
-      }
-      sorted.forEach(([addr, bal], idx) => {
-        holdersList.innerHTML += `<div class="holder"><span>#${idx+1} ${addr.slice(0,8)}...${addr.slice(-6)}</span><span>${bal.toLocaleString()} MONS</span></div>`;
-      });
-    }
-
-    window.addEventListener('load', initWeb3);
-  </script>
+  // Top holders
+  const holdersList = document.getElementById('holdersList');
+  holdersList.innerHTML = '';
+  const top = Array.from(state.holders.entries()).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  if(top.length===0){ holdersList.innerHTML = '<div class="holder"><span>No holders yet</span><span>0 MONS</span></div>'; return; }
+  top.forEach(([addr,b])=>{
+    holdersList.innerHTML += `<div class="holder"><span>${addr}</span><span>${b.toLocaleString()} MONS</span></div>`;
+  });
+}
+</script>
 </body>
 </html>
