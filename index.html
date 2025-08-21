@@ -48,6 +48,7 @@
 
     <div class="progress"><div id="progressFill" class="bar"></div></div>
     <div id="scanStatus" class="status">Connecting RPC…</div>
+    <div id="lastBlock" class="status">Last synced block: -</div>
 
     <div class="row">
       <button id="connectBtn" class="secondary" onclick="connectWallet()">Connect Wallet</button>
@@ -111,6 +112,10 @@ window.addEventListener('load', async () => {
 
 function setScanStatus(msg){
   document.getElementById('scanStatus').innerText = msg;
+}
+
+function updateLastBlock(){
+  document.getElementById('lastBlock').innerText = `Last synced block: ${state.lastProcessed.toLocaleString()}`;
 }
 
 async function connectWallet(){
@@ -200,9 +205,11 @@ async function indexRange(from, to){
     }
     updateUI();
     saveCache();
+    updateLastBlock();
     await sleep(80);
   }
   setScanStatus(`Synced up to block ${state.lastProcessed.toLocaleString()}.`);
+  updateLastBlock();
 }
 
 function safeProcessTransaction(tx){
@@ -291,6 +298,7 @@ function loadCache(){
     state.holders = new Map(cache.holders);
     state.lastProcessed = cache.lastProcessed;
     updateUI();
+    updateLastBlock();
     setScanStatus(`Loaded cached state up to block ${state.lastProcessed}`);
   }catch(e){ console.warn('cache load fail', e); }
 }
@@ -301,6 +309,7 @@ function forceResync(){
   state.holders = new Map();
   state.lastProcessed = DEPLOY_BLOCK - 1;
   updateUI();
+  updateLastBlock();
   localStorage.removeItem('monsIndexerCache');
   fullIndexFromLastProcessed();
 }
