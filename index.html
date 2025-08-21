@@ -90,15 +90,15 @@ const state = {
   totalMinted: 0,
   mintCount: 0,
   holders: new Map(),
-  lastProcessed: DEPLOY_BLOCK - 1
+  lastProcessed: DEPLOY_BLOCK
 };
 
 window.addEventListener('load', async () => {
   web3Read = new Web3(MONAD.rpcUrl);
   setScanStatus('RPC connected. Indexing chain…');
   const loaded = loadCache();
-  if(!loaded){
-    state.lastProcessed = DEPLOY_BLOCK - 1;
+  if (!loaded) {
+    state.lastProcessed = DEPLOY_BLOCK;
   }
   await fullIndexFromLastProcessed();
   setInterval(async () => {
@@ -187,8 +187,9 @@ async function pollAndProcessTx(hash){
 async function fullIndexFromLastProcessed(){
   try{
     const latest = await web3Read.eth.getBlockNumber();
-    if(latest > state.lastProcessed){
-      await indexRange(state.lastProcessed + 1, latest);
+    setScanStatus(`Starting index from block ${state.lastProcessed} to ${latest}…`);
+    if (latest >= state.lastProcessed) {
+      await indexRange(state.lastProcessed, latest);
     }
   }catch(e){ console.error('initial index failed', e); setScanStatus('Indexing failed: '+e.message); }
 }
@@ -314,7 +315,7 @@ function forceResync(){
   state.totalMinted = 0;
   state.mintCount = 0;
   state.holders = new Map();
-  state.lastProcessed = DEPLOY_BLOCK - 1;
+  state.lastProcessed = DEPLOY_BLOCK;
   updateUI();
   updateLastBlock();
   localStorage.removeItem('monsIndexerCache');
